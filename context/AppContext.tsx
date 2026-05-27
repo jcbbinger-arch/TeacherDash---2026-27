@@ -28,6 +28,8 @@ enum OperationType {
   WRITE = 'write',
 }
 
+export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
+
 interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
@@ -67,7 +69,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 // --- Custom Hook for Local Storage with Offline Firestore Sync ---
-function useSyncedState<T>(key: string, initialValue: T, user: User | null): [T, (val: T | ((curr: T) => T)) => void, React.Dispatch<React.SetStateAction<T>>] {
+function useSyncedState<T>(key: string, initialValue: T, user: User | null, setSyncStatus?: (status: SyncStatus) => void): [T, (val: T | ((curr: T) => T)) => void, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -100,10 +102,18 @@ function useSyncedState<T>(key: string, initialValue: T, user: User | null): [T,
         console.error(error);
       }
       if (user) {
+        if (setSyncStatus) setSyncStatus('syncing');
         setDoc(doc(db, 'users', user.uid, 'data', key), {
           data: valueToStore,
           updatedAt: serverTimestamp()
-        }).catch(err => console.error("Error setting doc:", err));
+        })
+        .then(() => {
+          if (setSyncStatus) setSyncStatus('synced');
+        })
+        .catch(err => {
+          console.error(`Error setting doc for key ${key}:`, err);
+          if (setSyncStatus) setSyncStatus('error');
+        });
       }
       return valueToStore;
     });
@@ -285,6 +295,7 @@ interface AppContextType {
     signOut: () => Promise<void>;
     
     calculatedStudentGrades: Record<string, StudentCalculatedGrades>;
+    syncStatus: SyncStatus;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -293,6 +304,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Auth (Placed first so it can be passed to useSyncedState hooks)
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [syncStatus, setSyncStatus] = useState<SyncStatus>('offline');
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -303,55 +315,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, []);
 
     // Basic Data States with Sync
-    const [students, setStudents, setStudentsRaw] = useSyncedState<Student[]>('students', [], user);
-    const [practiceGroups, setPracticeGroups, setPracticeGroupsRaw] = useSyncedState<PracticeGroup[]>('practiceGroups', [], user);
-    const [services, setServices, setServicesRaw] = useSyncedState<Service[]>('services', [], user);
-    const [serviceEvaluations, setServiceEvaluations, setServiceEvaluationsRaw] = useSyncedState<ServiceEvaluation[]>('serviceEvaluations', [], user);
+    const [students, setStudents, setStudentsRaw] = useSyncedState<Student[]>('students', [], user, setSyncStatus);
+    const [practiceGroups, setPracticeGroups, setPracticeGroupsRaw] = useSyncedState<PracticeGroup[]>('practiceGroups', [], user, setSyncStatus);
+    const [services, setServices, setServicesRaw] = useSyncedState<Service[]>('services', [], user, setSyncStatus);
+    const [serviceEvaluations, setServiceEvaluations, setServiceEvaluationsRaw] = useSyncedState<ServiceEvaluation[]>('serviceEvaluations', [], user, setSyncStatus);
     const [serviceRoles, setServiceRoles, setServiceRolesRaw] = useSyncedState<ServiceRole[]>('serviceRoles', [
         { id: 'role1', name: 'Jefe de Cocina', color: '#ef4444', type: 'leader' },
         { id: 'role2', name: 'Segundo de Cocina', color: '#f97316', type: 'leader' },
         { id: 'role3', name: 'Jefe de Partida', color: '#84cc16', type: 'secondary' },
         { id: 'role4', name: 'Cocinero', color: '#22c55e', type: 'secondary' },
         { id: 'role5', name: 'Ayudante', color: '#3b82f6', type: 'secondary' },
-    ], user);
-    const [entryExitRecords, setEntryExitRecords, setEntryExitRecordsRaw] = useSyncedState<EntryExitRecord[]>('entryExitRecords', [], user);
+    ], user, setSyncStatus);
+    const [entryExitRecords, setEntryExitRecords, setEntryExitRecordsRaw] = useSyncedState<EntryExitRecord[]>('entryExitRecords', [], user, setSyncStatus);
 
     // Academic Grades States
-    const [academicGrades, setAcademicGrades, setAcademicGradesRaw] = useSyncedState<AcademicGrades>('academicGrades', {}, user);
-    const [instrumentGrades, setInstrumentGrades, setInstrumentGradesRaw] = useSyncedState<InstrumentGrades>('instrumentGrades', {}, user);
-    const [courseGrades, setCourseGrades, setCourseGradesRaw] = useSyncedState<CourseGrades>('courseGrades', {}, user);
-    const [practicalExamEvaluations, setPracticalExamEvaluations, setPracticalExamEvaluationsRaw] = useSyncedState<PracticalExamEvaluation[]>('practicalExamEvaluations', [], user);
+    const [academicGrades, setAcademicGrades, setAcademicGradesRaw] = useSyncedState<AcademicGrades>('academicGrades', {}, user, setSyncStatus);
+    const [instrumentGrades, setInstrumentGrades, setInstrumentGradesRaw] = useSyncedState<InstrumentGrades>('instrumentGrades', {}, user, setSyncStatus);
+    const [courseGrades, setCourseGrades, setCourseGradesRaw] = useSyncedState<CourseGrades>('courseGrades', {}, user, setSyncStatus);
+    const [practicalExamEvaluations, setPracticalExamEvaluations, setPracticalExamEvaluationsRaw] = useSyncedState<PracticalExamEvaluation[]>('practicalExamEvaluations', [], user, setSyncStatus);
     
     // App Config States
-    const [teacherData, setTeacherData, setTeacherDataRaw] = useSyncedState<TeacherData>('teacher-app-data', { name: 'Juan Codina Barranco', email: 'juan.codina@murciaeduca.es', logo: null }, user);
-    const [instituteData, setInstituteData, setInstituteDataRaw] = useSyncedState<InstituteData>('institute-app-data', { name: 'CIFP Hostelería y Turismo de Cartagena', address: 'Calle Muralla del Mar, 3, 30202 Cartagena, Murcia', cif: 'Q1234567A', logo: null }, user);
-    const [trimesterDates, setTrimesterDates, setTrimesterDatesRaw] = useSyncedState<TrimesterDates>('trimester-dates', defaultTrimesterDates, user);
+    const [teacherData, setTeacherData, setTeacherDataRaw] = useSyncedState<TeacherData>('teacher-app-data', { name: 'Juan Codina Barranco', email: 'juan.codina@murciaeduca.es', logo: null }, user, setSyncStatus);
+    const [instituteData, setInstituteData, setInstituteDataRaw] = useSyncedState<InstituteData>('institute-app-data', { name: 'CIFP Hostelería y Turismo de Cartagena', address: 'Calle Muralla del Mar, 3, 30202 Cartagena, Murcia', cif: 'Q1234567A', logo: null }, user, setSyncStatus);
+    const [trimesterDates, setTrimesterDates, setTrimesterDatesRaw] = useSyncedState<TrimesterDates>('trimester-dates', defaultTrimesterDates, user, setSyncStatus);
     
     // PC Module Data
-    const [pcResultadosAprendizaje, setPcResultadosAprendizaje, setPcResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('pc-resultadosAprendizaje', mockRA, user);
-    const [pcCriteriosEvaluacion, setPcCriteriosEvaluacion, setPcCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('pc-criteriosEvaluacion', mockCriterios, user);
-    const [pcInstrumentosEvaluacion, setPcInstrumentosEvaluacion, setPcInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('pc-instrumentosEvaluacion', mockInstrumentos, user);
-    const [pcUnidadesTrabajo, setPcUnidadesTrabajo, setPcUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('pc-unidadesTrabajo', mockUTs, user);
+    const [pcResultadosAprendizaje, setPcResultadosAprendizaje, setPcResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('pc-resultadosAprendizaje', mockRA, user, setSyncStatus);
+    const [pcCriteriosEvaluacion, setPcCriteriosEvaluacion, setPcCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('pc-criteriosEvaluacion', mockCriterios, user, setSyncStatus);
+    const [pcInstrumentosEvaluacion, setPcInstrumentosEvaluacion, setPcInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('pc-instrumentosEvaluacion', mockInstrumentos, user, setSyncStatus);
+    const [pcUnidadesTrabajo, setPcUnidadesTrabajo, setPcUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('pc-unidadesTrabajo', mockUTs, user, setSyncStatus);
 
     // Optativa Module Data
-    const [optativaResultadosAprendizaje, setOptativaResultadosAprendizaje, setOptativaResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('optativa-resultadosAprendizaje', {}, user);
-    const [optativaCriteriosEvaluacion, setOptativaCriteriosEvaluacion, setOptativaCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('optativa-criteriosEvaluacion', {}, user);
-    const [optativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('optativa-instrumentosEvaluacion', {}, user);
-    const [optativaUnidadesTrabajo, setOptativaUnidadesTrabajo, setOptativaUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('optativa-unidadesTrabajo', {}, user);
+    const [optativaResultadosAprendizaje, setOptativaResultadosAprendizaje, setOptativaResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('optativa-resultadosAprendizaje', {}, user, setSyncStatus);
+    const [optativaCriteriosEvaluacion, setOptativaCriteriosEvaluacion, setOptativaCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('optativa-criteriosEvaluacion', {}, user, setSyncStatus);
+    const [optativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('optativa-instrumentosEvaluacion', {}, user, setSyncStatus);
+    const [optativaUnidadesTrabajo, setOptativaUnidadesTrabajo, setOptativaUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('optativa-unidadesTrabajo', {}, user, setSyncStatus);
 
     // Proyecto Module Data
-    const [proyectoResultadosAprendizaje, setProyectoResultadosAprendizaje, setProyectoResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('proyecto-resultadosAprendizaje', {}, user);
-    const [proyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('proyecto-criteriosEvaluacion', {}, user);
-    const [proyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('proyecto-instrumentosEvaluacion', {}, user);
-    const [proyectoUnidadesTrabajo, setProyectoUnidadesTrabajo, setProyectoUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('proyecto-unidadesTrabajo', {}, user);
+    const [proyectoResultadosAprendizaje, setProyectoResultadosAprendizaje, setProyectoResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('proyecto-resultadosAprendizaje', {}, user, setSyncStatus);
+    const [proyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('proyecto-criteriosEvaluacion', {}, user, setSyncStatus);
+    const [proyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('proyecto-instrumentosEvaluacion', {}, user, setSyncStatus);
+    const [proyectoUnidadesTrabajo, setProyectoUnidadesTrabajo, setProyectoUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('proyecto-unidadesTrabajo', {}, user, setSyncStatus);
 
-    const [profesores, setProfesores, setProfesoresRaw] = useSyncedState<Profesor[]>('profesores', mockProfesores, user);
+    const [profesores, setProfesores, setProfesoresRaw] = useSyncedState<Profesor[]>('profesores', mockProfesores, user, setSyncStatus);
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     // Sync effect: executes whenever Google sign-in completes to either restore remote data or back up local offline progress
     useEffect(() => {
         const syncData = async () => {
-            if (!user) return;
+            if (!user) {
+                setSyncStatus('offline');
+                return;
+            }
+            
+            setSyncStatus('syncing');
+            console.info("[Firebase Sync] Iniciando sincronización de datos para el usuario:", { uid: user.uid, email: user.email });
             
             try {
                 addToast("Sincronizando datos con la base de datos remota...", "info");
@@ -367,9 +385,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 try {
                     querySnapshot = await getDocs(collection(db, 'users', user.uid, 'data'));
                 } catch (err) {
+                    console.error("[Firebase Sync] Error obteniendo colección de datos:", err);
+                    setSyncStatus('error');
                     handleFirestoreError(err, OperationType.GET, dataPath);
                     return;
                 }
+
+                console.info("[Firebase Sync] Documentos remotos encontrados en Firestore:", querySnapshot.size);
 
                 const firestoreData: Record<string, any> = {};
                 querySnapshot.forEach(docSnap => {
@@ -408,30 +430,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     { key: 'proyecto-unidadesTrabajo', current: proyectoUnidadesTrabajo, rawSetter: setProyectoUnidadesTrabajoRaw },
                 ];
 
+                const writePromises: Promise<void>[] = [];
+
                 for (const config of syncConfigs) {
                     const remoteData = firestoreData[config.key];
                     if (remoteData !== undefined) {
+                        const len = Array.isArray(remoteData) ? `${remoteData.length} elementos` : (remoteData && typeof remoteData === 'object' ? `${Object.keys(remoteData).length} claves` : 'valor');
+                        console.info(`[Firebase Sync] Restaurando desde Firestore la clave "${config.key}":`, len);
                         config.rawSetter(remoteData);
                         try {
                             window.localStorage.setItem(config.key, JSON.stringify(remoteData));
                         } catch (e) {
-                            console.error(e);
+                            console.error(`[Firebase Sync] Error escribiendo localStorage para "${config.key}":`, e);
                         }
                     } else {
-                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
-                        try {
-                            await setDoc(docRef, {
-                                data: config.current,
-                                updatedAt: serverTimestamp()
-                            });
-                        } catch (err) {
-                            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/data/${config.key}`);
+                        const countLocal = Array.isArray(config.current) ? config.current.length : (config.current && typeof config.current === 'object' ? Object.keys(config.current).length : 0);
+                        if (countLocal > 0) {
+                            console.info(`[Firebase Sync] Subiendo datos locales a Firestore para la clave "${config.key}" (${countLocal} elementos/claves encontrados)...`);
+                        } else {
+                            console.info(`[Firebase Sync] Clave vacía "${config.key}" en local, inicializando en base de datos remota...`);
                         }
+                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
+                        const writePromise = setDoc(docRef, {
+                            data: config.current,
+                            updatedAt: serverTimestamp()
+                        }).catch(err => {
+                            console.error(`[Firebase Sync] Error al escribir clave "${config.key}" en Firestore:`, err);
+                            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/data/${config.key}`);
+                        });
+                        writePromises.push(writePromise);
                     }
                 }
+
+                if (writePromises.length > 0) {
+                    console.info(`[Firebase Sync] Sincronizando ${writePromises.length} colecciones pendientes de forma simultánea...`);
+                    await Promise.all(writePromises);
+                }
+
+                console.info("[Firebase Sync] ¡Sincronización con base de datos completada satisfactoriamente!");
+                setSyncStatus('synced');
                 addToast("Sincronización finalizada correctamente", "success");
             } catch (error) {
-                console.error("Definitive Sync Failure:", error);
+                console.error("[Firebase Sync] Fallo definitivo de sincronización:", error);
+                setSyncStatus('error');
                 addToast("Fallo al actualizar la sincronización con base de datos", "error");
             }
         };
@@ -739,7 +780,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signIn: signInWithGoogle,
         signOut: logout,
 
-        calculatedStudentGrades
+        calculatedStudentGrades,
+        syncStatus
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
