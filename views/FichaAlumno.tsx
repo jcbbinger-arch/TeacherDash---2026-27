@@ -165,7 +165,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
           <React.Fragment key={key}>
               <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(key) ? (p.delete(key), new Set(p)) : new Set(p.add(key)))}>
                   <td className="p-2 font-medium text-left">{label}</td>
-                  <td className="p-2 font-bold">{activities.length > 0 ? avgGrade.toFixed(2) : '-'}</td>
+                  <td className="p-2 font-bold">{activities.length > 0 ? <span className={avgGrade < 5 ? 'text-red-500' : 'text-green-600'}>{avgGrade.toFixed(2)}</span> : '-'}</td>
                   <td className="p-2" colSpan={3}>
                       <div className="flex justify-center">
                           {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
@@ -182,7 +182,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                           <td className="p-2">{activityGrade.normal ?? '-'}</td>
                           <td className="p-2">{activityGrade.rec1 ?? '-'}</td>
                           <td className="p-2">{activityGrade.rec2 ?? '-'}</td>
-                          <td className="p-2 font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
+                          <td className={`p-2 font-bold ${finalGrade > 0 ? (finalGrade < 5 ? 'text-red-500' : 'text-green-600') : ''}`}>{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
                       </tr>
                   );
               })}
@@ -707,11 +707,11 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                     <td colSpan={5} className="text-center font-bold text-green-600 bg-green-50">CONVALIDADA</td>
                                                 ) : (
                                                     <>
-                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{gradesObj.t1 !== null ? gradesObj.t1.toFixed(2) : '-'}</td>
-                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{gradesObj.t2 !== null ? gradesObj.t2.toFixed(2) : '-'}</td>
-                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{mod.trimesters === 3 ? (gradesObj.t3 !== null ? gradesObj.t3.toFixed(2) : '-') : <span className="text-gray-400">N/A</span>}</td>
-                                                        <td>{recVal ?? '-'}</td>
-                                                        <td className={`font-bold ${gradesObj.final !== null && gradesObj.final < 5 ? 'text-red-600' : ''}`}>{gradesObj.final?.toFixed(2) ?? '-'}</td>
+                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{gradesObj.t1 !== null ? <span className={gradesObj.t1 < 5 ? 'text-red-500' : 'text-green-600'}>{gradesObj.t1.toFixed(2)}</span> : '-'}</td>
+                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{gradesObj.t2 !== null ? <span className={gradesObj.t2 < 5 ? 'text-red-500' : 'text-green-600'}>{gradesObj.t2.toFixed(2)}</span> : '-'}</td>
+                                                        <td className={calculated ? "bg-gray-50 font-medium" : ""}>{mod.trimesters === 3 ? (gradesObj.t3 !== null ? <span className={gradesObj.t3 < 5 ? 'text-red-500' : 'text-green-600'}>{gradesObj.t3.toFixed(2)}</span> : '-') : <span className="text-gray-400">N/A</span>}</td>
+                                                        <td>{recVal !== null ? <span className={recVal < 5 ? 'text-red-500' : 'text-green-600'}>{recVal.toFixed(2)}</span> : '-'}</td>
+                                                        <td className={`font-bold ${gradesObj.final !== null ? (gradesObj.final < 5 ? 'text-red-600' : 'text-green-600') : ''}`}>{gradesObj.final?.toFixed(2) ?? '-'}</td>
                                                     </>
                                                 )}
                                             </tr>
