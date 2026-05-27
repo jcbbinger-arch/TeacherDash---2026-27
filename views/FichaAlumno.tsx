@@ -608,13 +608,13 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                             <React.Fragment key={servKey}>
                                                                 <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(servKey) ? (p.delete(servKey), new Set(p)) : new Set(p.add(servKey)))}>
                                                                     <td className="p-2 pl-6 text-left">Servicios</td>
-                                                                    <td className="p-2 font-bold">{avg.toFixed(2)}</td>
+                                                                    <td className="p-2 font-bold">{avg < 5 ? <span className="text-red-500">{avg.toFixed(2)}</span> : <span className="text-green-600">{avg.toFixed(2)}</span>}</td>
                                                                     <td className="p-2">{isServExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}</td>
                                                                 </tr>
                                                                 {isServExpanded && servicesInPeriod.map(s => (
                                                                     <tr key={s.service.id} className="bg-gray-50 text-xs">
                                                                         <td className="p-2 pl-12 text-left">{s.service.name}</td>
-                                                                        <td className="p-2 font-medium">{s.studentGrade.toFixed(2)}</td>
+                                                                        <td className="p-2 font-medium">{s.studentGrade < 5 ? <span className="text-red-500">{s.studentGrade.toFixed(2)}</span> : <span className="text-green-600">{s.studentGrade.toFixed(2)}</span>}</td>
                                                                         <td className="p-2"></td>
                                                                     </tr>
                                                                 ))}
@@ -623,18 +623,20 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                     })()}
                                                     {/* Ex. Práctico Section */}
                                                     {(() => {
+                                                        if (!pcInstrumentosEvaluacion) return null;
                                                         const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
-                                                            inst.nombre.toLowerCase().includes('prác') || 
-                                                            inst.nombre.toLowerCase().includes('práctico') ||
-                                                            inst.key.toLowerCase().includes('practico')
+                                                            (inst.nombre && (inst.nombre.toLowerCase().includes('prác') || inst.nombre.toLowerCase().includes('practic'))) || 
+                                                            (inst.key && inst.key.toLowerCase().includes('practic'))
                                                         );
-                                                        const examenesInPeriod = pracInstrument ? pracInstrument.activities.filter(a => a.trimester === pKey) : [];
+                                                        if (!pracInstrument || !pracInstrument.activities) return null;
+                                                        
+                                                        const examenesInPeriod = pracInstrument.activities.filter(a => a.trimester === pKey);
                                                         if (examenesInPeriod.length === 0) return null;
                                                         
                                                         const grades = examenesInPeriod.map(act => {
-                                                            const g = instrumentGrades[student.id]?.[act.id];
+                                                            const g = instrumentGrades && student && instrumentGrades[student.id]?.[act.id];
                                                             return typeof g === 'object' && g !== null && 'normal' in g ? g.normal : (typeof g === 'number' ? g : null);
-                                                        }).filter(g => g !== null) as number[];
+                                                        }).filter(g => g !== null && g !== undefined) as number[];
                                                         const avg = grades.length > 0 ? grades.reduce((sum, g) => sum + g, 0) / grades.length : 0;
                                                         
                                                         const pracKey = `practico-${pKey}`;
@@ -643,16 +645,16 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                             <React.Fragment key={pracKey}>
                                                                 <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(pracKey) ? (p.delete(pracKey), new Set(p)) : new Set(p.add(pracKey)))}>
                                                                     <td className="p-2 pl-6 text-left">Ex. Práctico</td>
-                                                                    <td className="p-2 font-bold">{grades.length > 0 ? avg.toFixed(2) : '-'}</td>
+                                                                    <td className="p-2 font-bold">{grades.length > 0 ? (avg < 5 ? <span className="text-red-500">{avg.toFixed(2)}</span> : <span className="text-green-600">{avg.toFixed(2)}</span>) : '-'}</td>
                                                                     <td className="p-2">{isPracExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}</td>
                                                                 </tr>
                                                                 {isPracExpanded && examenesInPeriod.map(act => {
-                                                                    const g = instrumentGrades[student.id]?.[act.id];
+                                                                    const g = instrumentGrades && student && instrumentGrades[student.id]?.[act.id];
                                                                     const grade = typeof g === 'object' && g !== null && 'normal' in g ? g.normal : (typeof g === 'number' ? g : null);
                                                                     return (
                                                                         <tr key={act.id} className="bg-gray-50 text-xs">
                                                                             <td className="p-2 pl-12 text-left">{act.name}</td>
-                                                                            <td className="p-2 font-medium">{grade?.toFixed(2) ?? '-'}</td>
+                                                                            <td className="p-2 font-medium">{grade !== null && grade !== undefined ? (grade < 5 ? <span className="text-red-500">{grade.toFixed(2)}</span> : <span className="text-green-600">{grade.toFixed(2)}</span>) : '-'}</td>
                                                                             <td className="p-2"></td>
                                                                         </tr>
                                                                     )
