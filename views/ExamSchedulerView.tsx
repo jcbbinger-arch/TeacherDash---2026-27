@@ -24,6 +24,7 @@ const ExamSchedulerView: React.FC = () => {
     const [startTime, setStartTime] = useState('08:30');
     const [examDuration, setExamDuration] = useState(120); // minutes
     const [interval, setInterval] = useState(15); // minutes
+    const [gapTime, setGapTime] = useState(0); // minutes
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
@@ -45,7 +46,9 @@ const ExamSchedulerView: React.FC = () => {
 
     const calculateTimes = (index: number) => {
         const [startHour, startMinute] = startTime.split(':').map(Number);
-        const totalStartMinutes = startHour * 60 + startMinute + (index * interval);
+        
+        const batch = Math.floor(index / 8);
+        const totalStartMinutes = (startHour * 60 + startMinute) + (batch * gapTime) + (index * interval);
         
         const entryDate = new Date();
         entryDate.setHours(Math.floor(totalStartMinutes / 60));
@@ -174,6 +177,10 @@ const ExamSchedulerView: React.FC = () => {
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Intervalo Escalonado (min)</label>
                     <input type="number" value={interval} onChange={e => setInterval(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded-md" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tiempo espera entre grupos (min)</label>
+                    <input type="number" value={gapTime} onChange={e => setGapTime(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded-md" />
                 </div>
             </div>
 

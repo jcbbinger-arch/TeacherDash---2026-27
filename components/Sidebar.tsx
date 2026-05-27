@@ -120,6 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
                     <NavLink icon={PencilRulerIcon} label="Exámenes Prácticos" isActive={activeView === 'pc-examenes-practicos'} onClick={() => setActiveView('pc-examenes-practicos')} isCollapsed={isCollapsed} isSubItem />
                     <NavLink icon={ClipboardCheckIcon} label="Resumen Servicios" isActive={activeView === 'pc-calificaciones'} onClick={() => setActiveView('pc-calificaciones')} isCollapsed={isCollapsed} isSubItem />
                     <NavLink icon={ArrowRightLeftIcon} label="Salidas/Entradas" isActive={activeView === 'pc-salidas-entradas'} onClick={() => setActiveView('pc-salidas-entradas')} isCollapsed={isCollapsed} isSubItem />
+                    <NavLink icon={ClockIcon} label="Planificador Exámenes" isActive={activeView === 'pc-exam-scheduler'} onClick={() => setActiveView('pc-exam-scheduler')} isCollapsed={isCollapsed} isSubItem />
                 </>
             )}
           </div>
@@ -162,7 +163,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
           <h3 className={`px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>
             Otros
           </h3>
-          <NavLink icon={ClockIcon} label="Planificador Exámenes" isActive={activeView === 'exam-scheduler'} onClick={() => setActiveView('exam-scheduler')} isCollapsed={isCollapsed}/>
           <NavLink icon={SettingsIcon} label="Gestión App" isActive={activeView === 'gestion-app'} onClick={() => setActiveView('gestion-app')} isCollapsed={isCollapsed}/>
         </nav>
         

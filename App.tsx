@@ -81,6 +81,8 @@ const AppContent: React.FC = () => {
                 />;
             case 'pc-examenes-practicos':
                 return <ExamenesPracticosView isFocusMode={isFocusMode} setIsFocusMode={setIsFocusMode} />;
+            case 'pc-exam-scheduler':
+                return <ExamSchedulerView />;
 
             // Módulo Optativa
             case 'optativa-resumen':
@@ -102,8 +104,6 @@ const AppContent: React.FC = () => {
             case 'proyecto-instrumentos':
                 return <InstrumentosView module="proyecto" />;
 
-            case 'exam-scheduler':
-                return <ExamSchedulerView />;
             case 'gestion-app':
                 return <GestionAppView />;
             default:
