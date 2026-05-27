@@ -141,6 +141,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
   const [editedStudent, setEditedStudent] = useState<Student>(student);
   const [activeTab, setActiveTab] = useState('general');
   const [expandedRAs, setExpandedRAs] = useState<Set<string>>(new Set());
+  const [expandedAcademicRows, setExpandedAcademicRows] = useState<Set<string>>(new Set());
   const [activeModuleForRA, setActiveModuleForRA] = useState<'pc' | 'optativa' | 'proyecto'>('pc');
 
 
@@ -529,7 +530,8 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
                                 {ACADEMIC_EVALUATION_STRUCTURE.periods[0].instruments.filter(i => i.type !== 'manual').map(instrument => {
                                     return (
-                                    <tr key={instrument.key}>
+                                    <React.Fragment key={instrument.key}>
+                                    <tr className="border-b">
                                         <td className="px-4 py-2 text-left font-medium">{instrument.name}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.map(period => {
                                              let grade: number | null = null;
@@ -539,9 +541,41 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                  const periodKey = period.key as keyof StudentCalculatedGrades['practicalExams'];
                                                  grade = allCalculatedGrades[student.id]?.practicalExams?.[periodKey] ?? null;
                                              }
-                                            return <td key={`${period.key}-${instrument.key}`}>{grade?.toFixed(2) ?? '-'}</td>
+                                             const key = `${period.key}-${instrument.key}`;
+                                             const isExpanded = expandedAcademicRows.has(key);
+                                            return (
+                                                <td key={key} className="px-4 py-2 cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(key) ? (p.delete(key), new Set(p)) : new Set(p.add(key)))}>
+                                                    <div className="flex items-center justify-center">
+                                                    {grade?.toFixed(2) ?? '-'}
+                                                    {grade !== null && (isExpanded ? <ChevronDownIcon className="w-4 h-4 ml-1" /> : <ChevronRightIcon className="w-4 h-4 ml-1" />)}
+                                                    </div>
+                                                </td>
+                                            )
                                         })}
                                     </tr>
+                                    {ACADEMIC_EVALUATION_STRUCTURE.periods.map(period => {
+                                        const key = `${period.key}-${instrument.key}`;
+                                        if (!expandedAcademicRows.has(key)) return null;
+                                        
+                                        // Componentes
+                                        let items: { name: string, grade: number | null }[] = [];
+                                        if (instrument.key === 'servicios') {
+                                            items = studentServicesData.filter(s => s.service.trimester === period.key).map(s => ({ name: s.service.name, grade: s.studentGrade }));
+                                        } else if (instrument.key.startsWith('exPractico')) {
+                                            // TODO: get individual practical exam components if available
+                                        }
+
+                                        return (
+                                            <tr key={`expanded-${key}`} className="bg-gray-50 text-xs">
+                                                <td colSpan={4} className="p-2">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {items.map(item => <span key={item.name} className="bg-white border rounded px-1.5 py-0.5">{item.name}: {item.grade?.toFixed(2) ?? '-'}</span>)}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                    </React.Fragment>
                                 )})}
                              </tbody>
                         </table>
