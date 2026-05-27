@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
     const handleNavigateToService = (serviceId: string, tab: 'planning' | 'evaluation' | null = 'planning') => {
         setInitialServiceId(serviceId);
         setInitialServiceTab(tab);
-        setActiveView('gestion-practica');
+        setActiveView('pc-gestion-practica');
     };
     
     const clearInitialServiceContext = () => {
@@ -54,18 +54,6 @@ const AppContent: React.FC = () => {
                 return <DashboardView onNavigate={setActiveView} />;
             case 'alumnos':
                 return <AlumnosView />;
-            case 'definir-grupos':
-                return <DefinirGruposView />;
-            case 'gestion-practica':
-                return <GestionPracticaView 
-                    initialServiceId={initialServiceId}
-                    initialServiceTab={initialServiceTab}
-                    clearInitialServiceContext={clearInitialServiceContext}
-                />;
-            case 'examenes-practicos':
-                return <ExamenesPracticosView isFocusMode={isFocusMode} setIsFocusMode={setIsFocusMode} />;
-            case 'calificaciones':
-                return <NotasServicioView onNavigateToService={handleNavigateToService} />;
             case 'gestion-academica':
                 return <GestionAcademicaView />;
             
@@ -78,6 +66,21 @@ const AppContent: React.FC = () => {
                 return <UTView module="pc" />;
             case 'pc-instrumentos':
                 return <InstrumentosView module="pc" />;
+            case 'pc-calificaciones':
+                return <NotasServicioView onNavigateToService={handleNavigateToService} />;
+            case 'pc-salidas-entradas':
+                return <RegistroSalidasEntradasView />;
+				
+            case 'pc-definir-grupos':
+                return <DefinirGruposView />;
+            case 'pc-gestion-practica':
+                return <GestionPracticaView 
+                    initialServiceId={initialServiceId}
+                    initialServiceTab={initialServiceTab}
+                    clearInitialServiceContext={clearInitialServiceContext}
+                />;
+            case 'pc-examenes-practicos':
+                return <ExamenesPracticosView isFocusMode={isFocusMode} setIsFocusMode={setIsFocusMode} />;
 
             // Módulo Optativa
             case 'optativa-resumen':
@@ -99,8 +102,6 @@ const AppContent: React.FC = () => {
             case 'proyecto-instrumentos':
                 return <InstrumentosView module="proyecto" />;
 
-            case 'salidas-entradas':
-                return <RegistroSalidasEntradasView />;
             case 'exam-scheduler':
                 return <ExamSchedulerView />;
             case 'gestion-app':
@@ -112,7 +113,7 @@ const AppContent: React.FC = () => {
     
     const LoadingFallback = () => <div className="flex-1 p-6 sm:p-8 flex items-center justify-center"><p>Cargando vista...</p></div>;
     
-    const mainContentClass = isFocusMode && activeView === 'examenes-practicos'
+    const mainContentClass = isFocusMode && activeView === 'pc-examenes-practicos'
       ? 'w-full h-screen overflow-hidden'
       : 'flex-1 p-6 sm:p-8 overflow-y-auto bg-gray-50';
 
@@ -120,11 +121,11 @@ const AppContent: React.FC = () => {
         <div className="flex h-screen bg-gray-100 font-sans">
              <ToastContainer toasts={toasts} />
              <Suspense fallback={<div></div>}>
-                {!(isFocusMode && activeView === 'examenes-practicos') && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+                {!(isFocusMode && activeView === 'pc-examenes-practicos') && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
              </Suspense>
             <div className="flex-1 flex flex-col overflow-hidden">
                  <Suspense fallback={<div></div>}>
-                    {!(isFocusMode && activeView === 'examenes-practicos') && <Header />}
+                    {!(isFocusMode && activeView === 'pc-examenes-practicos') && <Header />}
                  </Suspense>
                 <main className={mainContentClass}>
                     <Suspense fallback={<LoadingFallback />}>

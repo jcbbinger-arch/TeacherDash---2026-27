@@ -106,10 +106,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
         </button>
         {isExpanded && (
           <div className="pt-1 space-y-1">
+            <h4 className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Gestión Oficial</h4>
             <NavLink icon={DashboardIcon} label="Resumen" isActive={activeView === `${moduleKey}-resumen`} onClick={() => setActiveView(`${moduleKey}-resumen`)} isCollapsed={isCollapsed} isSubItem />
             <NavLink icon={FileTextIcon} label="RA" isActive={activeView === `${moduleKey}-ra`} onClick={() => setActiveView(`${moduleKey}-ra`)} isCollapsed={isCollapsed} isSubItem />
             <NavLink icon={BookOpenIcon} label="Unidades de Trabajo" isActive={activeView === `${moduleKey}-ut`} onClick={() => setActiveView(`${moduleKey}-ut`)} isCollapsed={isCollapsed} isSubItem />
             <NavLink icon={PencilIcon} label="Instrumentos" isActive={activeView === `${moduleKey}-instrumentos`} onClick={() => setActiveView(`${moduleKey}-instrumentos`)} isCollapsed={isCollapsed} isSubItem />
+            
+            <h4 className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Organización</h4>
+            {moduleKey === 'pc' && (
+                <>
+                    <NavLink icon={GroupIcon} label="Definir Grupos" isActive={activeView === 'pc-definir-grupos'} onClick={() => setActiveView('pc-definir-grupos')} isCollapsed={isCollapsed} isSubItem />
+                    <NavLink icon={ChefHatIcon} label="Gestión Práctica" isActive={activeView === 'pc-gestion-practica'} onClick={() => setActiveView('pc-gestion-practica')} isCollapsed={isCollapsed} isSubItem />
+                    <NavLink icon={PencilRulerIcon} label="Exámenes Prácticos" isActive={activeView === 'pc-examenes-practicos'} onClick={() => setActiveView('pc-examenes-practicos')} isCollapsed={isCollapsed} isSubItem />
+                    <NavLink icon={ClipboardCheckIcon} label="Resumen Servicios" isActive={activeView === 'pc-calificaciones'} onClick={() => setActiveView('pc-calificaciones')} isCollapsed={isCollapsed} isSubItem />
+                    <NavLink icon={ArrowRightLeftIcon} label="Salidas/Entradas" isActive={activeView === 'pc-salidas-entradas'} onClick={() => setActiveView('pc-salidas-entradas')} isCollapsed={isCollapsed} isSubItem />
+                </>
+            )}
           </div>
         )}
       </div>
@@ -134,15 +146,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
           </h3>
           <NavLink icon={DashboardIcon} label="Dashboard" isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} isCollapsed={isCollapsed}/>
           <NavLink icon={UsersIcon} label="Alumnos" isActive={activeView === 'alumnos'} onClick={() => setActiveView('alumnos')} isCollapsed={isCollapsed}/>
-          <NavLink icon={GroupIcon} label="Definir Grupos" isActive={activeView === 'definir-grupos'} onClick={() => setActiveView('definir-grupos')} isCollapsed={isCollapsed}/>
-          <NavLink icon={ChefHatIcon} label="Gestión Práctica" isActive={activeView === 'gestion-practica'} onClick={() => setActiveView('gestion-practica')} isCollapsed={isCollapsed}/>
-          <NavLink icon={PencilRulerIcon} label="Exámenes Prácticos" isActive={activeView === 'examenes-practicos'} onClick={() => setActiveView('examenes-practicos')} isCollapsed={isCollapsed}/>
            
            <h3 className={`px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>
             Calificaciones
           </h3>
           <NavLink icon={ClipboardListIcon} label="Gestión Académica" isActive={activeView === 'gestion-academica'} onClick={() => setActiveView('gestion-academica')} isCollapsed={isCollapsed}/>
-          <NavLink icon={ClipboardCheckIcon} label="Resumen Servicios" isActive={activeView === 'calificaciones'} onClick={() => setActiveView('calificaciones')} isCollapsed={isCollapsed}/>
           
           <h3 className={`px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>
             Módulos
@@ -154,7 +162,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
           <h3 className={`px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>
             Otros
           </h3>
-          <NavLink icon={ArrowRightLeftIcon} label="Salidas/Entradas" isActive={activeView === 'salidas-entradas'} onClick={() => setActiveView('salidas-entradas')} isCollapsed={isCollapsed}/>
           <NavLink icon={ClockIcon} label="Planificador Exámenes" isActive={activeView === 'exam-scheduler'} onClick={() => setActiveView('exam-scheduler')} isCollapsed={isCollapsed}/>
           <NavLink icon={SettingsIcon} label="Gestión App" isActive={activeView === 'gestion-app'} onClick={() => setActiveView('gestion-app')} isCollapsed={isCollapsed}/>
         </nav>
