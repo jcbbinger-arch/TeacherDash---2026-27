@@ -8,5 +8,15 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogle = async () => {
+    console.log("Llamando a signInWithPopup...");
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        console.log("signInWithPopup exitoso", result);
+        return result;
+    } catch (error) {
+        console.error("signInWithPopup falló", error);
+        throw error;
+    }
+};
 export const logout = () => signOut(auth);
