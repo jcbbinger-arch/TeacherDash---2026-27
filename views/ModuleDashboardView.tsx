@@ -76,42 +76,40 @@ const ModuleDashboardView: React.FC<ModuleDashboardViewProps> = ({ module, onNav
                 </div>
             </div>
 
-            {module === 'pc' && (
-                <div className="bg-white p-6 rounded-xl shadow-md mt-8">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Listado de Alumnos y Notas</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 uppercase">
-                                <tr>
-                                    <th className="px-6 py-3">Alumno</th>
-                                    <th className="px-6 py-3">Servicios T1</th>
-                                    <th className="px-6 py-3">Servicios T2</th>
-                                    <th className="px-6 py-3">Servicios T3</th>
-                                    <th className="px-6 py-3">Practico T1</th>
-                                    <th className="px-6 py-3">Practico T2</th>
-                                    <th className="px-6 py-3">Practico T3</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {context.students.map(student => {
-                                    const grades = context.calculatedStudentGrades[student.id];
-                                    return (
-                                        <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-6 py-4 font-medium text-gray-900">{student.nombre} {student.apellido1} {student.apellido2}</td>
-                                            <td className="px-6 py-4">{grades?.serviceAverages.t1 ?? '-'}</td>
-                                            <td className="px-6 py-4">{grades?.serviceAverages.t2 ?? '-'}</td>
-                                            <td className="px-6 py-4">{grades?.serviceAverages.t3 ?? '-'}</td>
-                                            <td className="px-6 py-4">{grades?.practicalExams.t1 ?? '-'}</td>
-                                            <td className="px-6 py-4">{grades?.practicalExams.t2 ?? '-'}</td>
-                                            <td className="px-6 py-4">{grades?.practicalExams.t3 ?? '-'}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+            <div className="bg-white p-6 rounded-xl shadow-md mt-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Listado de Alumnos y Notas</h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 uppercase">
+                            <tr>
+                                <th className="px-6 py-3">Alumno</th>
+                                <th className="px-6 py-3">Servicios T1</th>
+                                <th className="px-6 py-3">Servicios T2</th>
+                                <th className="px-6 py-3">Servicios T3</th>
+                                <th className="px-6 py-3">Practico T1</th>
+                                <th className="px-6 py-3">Practico T2</th>
+                                <th className="px-6 py-3">Practico T3</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {context.students.map(student => {
+                                const grades = context.calculatedStudentGrades[student.id];
+                                return (
+                                    <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
+                                        <td className="px-6 py-4 font-medium text-gray-900">{student.nombre} {student.apellido1} {student.apellido2}</td>
+                                        <td className="px-6 py-4">{grades?.serviceAverages.t1 ?? '-'}</td>
+                                        <td className="px-6 py-4">{grades?.serviceAverages.t2 ?? '-'}</td>
+                                        <td className="px-6 py-4">{grades?.serviceAverages.t3 ?? '-'}</td>
+                                        <td className="px-6 py-4">{grades?.practicalExams.t1 ?? '-'}</td>
+                                        <td className="px-6 py-4">{grades?.practicalExams.t2 ?? '-'}</td>
+                                        <td className="px-6 py-4">{grades?.practicalExams.t3 ?? '-'}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+            </div>
         </div>
     );
 };

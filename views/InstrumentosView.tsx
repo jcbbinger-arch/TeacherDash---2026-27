@@ -116,8 +116,31 @@ const getGradeForActivity = (
 const GradesMatrix: React.FC<{
     instrument: InstrumentoEvaluacion;
 }> = ({ instrument }) => {
-    const { students, academicGrades, calculatedStudentGrades } = useAppContext();
+    const { students, instrumentGrades, setInstrumentGrades } = useAppContext();
     const sortedStudents = useMemo(() => [...students].sort((a,b) => a.apellido1.localeCompare(b.apellido1)), [students]);
+
+    const handleGradeChange = (studentId: string, activityId: string, field: keyof ActivityGrade, value: string) => {
+        const numericValue = value === '' ? null : parseFloat(value);
+        setInstrumentGrades(prev => {
+            const studentGrades = prev[studentId] || {};
+            const activityGrade = studentGrades[activityId];
+            
+            let newActivityGrade: ActivityGrade;
+            if (typeof activityGrade === 'object' && activityGrade !== null) {
+                newActivityGrade = { ...activityGrade, [field]: field === 'isLocked' ? (value === 'true') : numericValue };
+            } else {
+                newActivityGrade = { normal: field === 'normal' ? numericValue : (activityGrade as number | null), rec1: field === 'rec1' ? numericValue : null, rec2: field === 'rec2' ? numericValue : null, isLocked: field === 'isLocked' ? (value === 'true') : false };
+            }
+
+            return {
+                ...prev,
+                [studentId]: {
+                    ...studentGrades,
+                    [activityId]: newActivityGrade
+                }
+            };
+        });
+    };
 
     if(instrument.activities.length === 0) {
         return <div className="text-center text-sm text-gray-500 py-4">Este instrumento no tiene actividades de evaluación definidas.</div>
@@ -130,7 +153,18 @@ const GradesMatrix: React.FC<{
                     <tr>
                         <th className="p-2 border font-semibold text-gray-600 w-48 text-left sticky left-0 bg-gray-200">Alumno</th>
                         {instrument.activities.map(act => (
-                            <th key={act.id} className="p-2 border font-semibold text-gray-600">{act.name} ({act.trimester.toUpperCase()})</th>
+                            <th key={act.id} className="p-2 border font-semibold text-gray-600 text-center" colSpan={4}>{act.name} ({act.trimester.toUpperCase()})</th>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th className="p-2 border font-semibold text-gray-600 w-48 text-left sticky left-0 bg-gray-200"></th>
+                        {instrument.activities.map(act => (
+                            <React.Fragment key={act.id}>
+                                <th className="p-1 border text-center">Nota</th>
+                                <th className="p-1 border text-center">Rec 1</th>
+                                <th className="p-1 border text-center">Rec 2</th>
+                                <th className="p-1 border text-center">Final</th>
+                            </React.Fragment>
                         ))}
                     </tr>
                 </thead>
@@ -139,13 +173,28 @@ const GradesMatrix: React.FC<{
                         <tr key={student.id} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}>
                             <td className={`p-2 border text-left font-medium text-gray-800 w-48 sticky left-0 group-hover:bg-gray-100 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                             {instrument.activities.map(act => {
-                                // Grade calculation logic here might need to be module-specific in the future
-                                // FIX: Corrected variable name from `calculatedGrades` to `calculatedStudentGrades` to match the value from the context.
-                                const grade = getGradeForActivity(student.id, act, academicGrades, calculatedStudentGrades);
+                                const grades = instrumentGrades[student.id]?.[act.id];
+                                const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null ? grades : { normal: grades as number | null, rec1: null, rec2: null, isLocked: false };
+                                
+                                const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
+
                                 return (
-                                    <td key={act.id} className={`p-2 border text-center font-semibold ${grade !== null && grade < 5 ? 'text-red-600' : 'text-gray-800'}`}>
-                                        {grade !== null ? grade.toFixed(2) : '-'}
-                                    </td>
+                                    <React.Fragment key={act.id}>
+                                        <td className="p-1 border text-center relative">
+                                            <input type="number" 
+                                                   value={activityGrade.normal ?? ''} 
+                                                   onChange={e => handleGradeChange(student.id, act.id, 'normal', e.target.value)} 
+                                                   className="w-12 p-1 border rounded text-center"
+                                                   disabled={activityGrade.isLocked}
+                                            />
+                                            <button onClick={() => handleGradeChange(student.id, act.id, 'isLocked', (!activityGrade.isLocked).toString())} className="absolute right-0 top-1 p-0.5">
+                                                {activityGrade.isLocked ? '🔒' : '🔓'}
+                                            </button>
+                                        </td>
+                                        <td className="p-1 border"><input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLocked}/></td>
+                                        <td className="p-1 border"><input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLocked}/></td>
+                                        <td className="p-2 border text-center font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
+                                    </React.Fragment>
                                 );
                             })}
                         </tr>

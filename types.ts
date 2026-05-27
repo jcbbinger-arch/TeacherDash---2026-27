@@ -179,9 +179,16 @@ export interface AcademicGrades {
 }
 
 // New type for instrument-based grades (Optativa, Proyecto, etc.)
+export interface ActivityGrade {
+    normal: number | null;
+    rec1: number | null;
+    rec2: number | null; // June
+    isLocked: boolean;
+}
+
 export interface InstrumentGrades {
     [studentId: string]: {
-        [activityId: string]: number | null;
+        [activityId: string]: ActivityGrade | number | null;
     };
 }
 
