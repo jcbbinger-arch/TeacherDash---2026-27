@@ -554,78 +554,113 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                  </tr>
                              </thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
-                                 {renderExamsForTrimester('t1', '1º Trimestre')}
+                                     {renderExamsForTrimester('t1', '1º Trimestre')}
                                      {renderExamsForTrimester('t2', '2º Trimestre')}
                                      {renderExamsForTrimester('t3', '3º Trimestre')}
-                                     <tr className="bg-gray-100 font-bold border-t">
-                                         <td className="p-2 text-left">Nota Final</td>
-                                         <td className="p-2" colSpan={4}>-</td>
-                                     </tr>
+                                     {(() => {
+                                        const t1Avg = examsByTrimester.t1.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t1.length || 1);
+                                        const t2Avg = examsByTrimester.t2.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t2.length || 1);
+                                        const t3Avg = examsByTrimester.t3.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t3.length || 1);
+                                        const periodsWithGrades = [examsByTrimester.t1.length > 0 ? t1Avg : null, examsByTrimester.t2.length > 0 ? t2Avg : null, examsByTrimester.t3.length > 0 ? t3Avg : null].filter(g => g !== null && g !== 0);
+                                        const finalGrade = periodsWithGrades.length > 0 ? periodsWithGrades.reduce((a, b) => a + b, 0) / periodsWithGrades.length : null;
+                                        return (
+                                            <tr className="bg-gray-100 font-bold border-t">
+                                                <td className="p-2 text-left">Nota Final</td>
+                                                <td className="p-2 font-bold" colSpan={4}>{finalGrade !== null ? finalGrade.toFixed(2) : '-'}</td>
+                                            </tr>
+                                        );
+                                     })()}
                              </tbody>
                         </table>
 
                          <h4 className="font-bold text-gray-700 mb-2">Servicios y Prácticos (Averages)</h4>
                          <table className="min-w-full text-sm text-center">
-                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Calificación</th><th className="px-4 py-3">1º Trimestre</th><th className="px-4 py-3">2º Trimestre</th></tr></thead>
+                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
+                                 <tr>
+                                     <th className="p-2 text-left">Categoría</th>
+                                     <th className="p-2">Nota</th>
+                                     <th className="p-2"></th>
+                                 </tr>
+                             </thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
-                                {ACADEMIC_EVALUATION_STRUCTURE.periods[0].instruments.filter(i => i.type !== 'manual').map(instrument => {
+                                {['t1', 't2', 't3'].map(pKey => {
+                                    const trTitle = pKey === 't1' ? '1º Trimestre' : pKey === 't2' ? '2º Trimestre' : '3º Trimestre';
+                                    const expandedKey = `academico-period-${pKey}`;
+                                    const isExpanded = expandedAcademicRows.has(expandedKey);
                                     return (
-                                    <React.Fragment key={instrument.key}>
-                                    <tr className="border-b">
-                                        <td className="px-4 py-2 text-left font-medium">{instrument.name}</td>
-                                        {['t1', 't2'].map(pKey => {
-                                             let grade: number | null = null;
-                                             if (instrument.key === 'servicios') {
-                                                 grade = allCalculatedGrades[student.id]?.serviceAverages?.[pKey as 't1' | 't2' | 't3'] ?? null;
-                                             } else if (instrument.key.startsWith('exPractico')) {
-                                                 const periodKey = pKey as keyof StudentCalculatedGrades['practicalExams'];
-                                                 grade = allCalculatedGrades[student.id]?.practicalExams?.[periodKey] ?? null;
-                                             }
-                                             const key = `${pKey}-${instrument.key}`;
-                                             const isExpanded = expandedAcademicRows.has(key);
-                                            return (
-                                                <td key={key} className="px-4 py-2 cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(key) ? (p.delete(key), new Set(p)) : new Set(p.add(key)))}>
-                                                    <div className="flex items-center justify-center">
-                                                    {grade?.toFixed(2) ?? '-'}
-                                                    {grade !== null && (isExpanded ? <ChevronDownIcon className="w-4 h-4 ml-1" /> : <ChevronRightIcon className="w-4 h-4 ml-1" />)}
-                                                    </div>
-                                                </td>
-                                            )
-                                        })}
-                                    </tr>
-                                    {['t1', 't2'].map(pKey => {
-                                        const key = `${pKey}-${instrument.key}`;
-                                        if (!expandedAcademicRows.has(key)) return null;
-                                        
-                                        // Componentes
-                                        let items: { name: string, grade: number | null }[] = [];
-                                        if (instrument.key === 'servicios') {
-                                            items = studentServicesData.filter(s => s.service.trimester === pKey).map(s => ({ name: s.service.name, grade: s.studentGrade }));
-                                        } else if (instrument.key.startsWith('exPractico')) {
-                                            const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre.includes('Práctico') || inst.nombre.includes('Práctica'));
-                                            if (pracInstrument) {
-                                                items = pracInstrument.activities
-                                                    .filter(act => act.trimester === pKey)
-                                                    .map(act => {
-                                                        const grades = instrumentGrades[student.id]?.[act.id];
-                                                        const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
-                                                        return { name: act.name, grade: grade };
-                                                    });
-                                            }
-                                        }
-
-                                        return (
-                                            <tr key={`expanded-${key}`} className="bg-gray-50 text-xs">
-                                                <td colSpan={3} className="p-2 text-left">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {items.length > 0 ? items.map(item => <span key={item.name} className="bg-white border rounded px-1.5 py-0.5">{item.name}: {item.grade?.toFixed(2) ?? '-'}</span>) : <span className="text-gray-400">Sin datos</span>}
-                                                    </div>
+                                        <React.Fragment key={pKey}>
+                                            <tr className="bg-gray-100 font-bold border-t cursor-pointer" onClick={() => setExpandedAcademicRows(p => p.has(expandedKey) ? (p.delete(expandedKey), new Set(p)) : new Set(p.add(expandedKey)))}>
+                                                <td className="p-2 text-left">{trTitle}</td>
+                                                <td className="p-2 text-center" colSpan={2}>
+                                                    {isExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}
                                                 </td>
                                             </tr>
-                                        )
-                                    })}
-                                    </React.Fragment>
-                                )})}
+                                            {isExpanded && (
+                                                <>
+                                                    {/* Servicios Section */}
+                                                    {(() => {
+                                                        const servicesInPeriod = studentServicesData.filter(s => s.service.trimester === pKey);
+                                                        if (servicesInPeriod.length === 0) return null;
+                                                        const avg = servicesInPeriod.reduce((sum, s) => sum + s.studentGrade, 0) / servicesInPeriod.length;
+                                                        const servKey = `servicios-${pKey}`;
+                                                        const isServExpanded = expandedAcademicRows.has(servKey);
+                                                        return (
+                                                            <React.Fragment key={servKey}>
+                                                                <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(servKey) ? (p.delete(servKey), new Set(p)) : new Set(p.add(servKey)))}>
+                                                                    <td className="p-2 pl-6 text-left">Servicios</td>
+                                                                    <td className="p-2 font-bold">{avg.toFixed(2)}</td>
+                                                                    <td className="p-2">{isServExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}</td>
+                                                                </tr>
+                                                                {isServExpanded && servicesInPeriod.map(s => (
+                                                                    <tr key={s.service.id} className="bg-gray-50 text-xs">
+                                                                        <td className="p-2 pl-12 text-left">{s.service.name}</td>
+                                                                        <td className="p-2 font-medium">{s.studentGrade.toFixed(2)}</td>
+                                                                        <td className="p-2"></td>
+                                                                    </tr>
+                                                                ))}
+                                                            </React.Fragment>
+                                                        )
+                                                    })()}
+                                                    {/* Ex. Práctico Section */}
+                                                    {(() => {
+                                                        const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre.includes('Práctico') || inst.nombre.includes('Práctica'));
+                                                        const examenesInPeriod = pracInstrument ? pracInstrument.activities.filter(a => a.trimester === pKey) : [];
+                                                        if (examenesInPeriod.length === 0) return null;
+                                                        
+                                                        const grades = examenesInPeriod.map(act => {
+                                                            const g = instrumentGrades[student.id]?.[act.id];
+                                                            return typeof g === 'object' && g !== null && 'normal' in g ? g.normal : (typeof g === 'number' ? g : null);
+                                                        }).filter(g => g !== null) as number[];
+                                                        const avg = grades.length > 0 ? grades.reduce((sum, g) => sum + g, 0) / grades.length : 0;
+                                                        
+                                                        const pracKey = `practico-${pKey}`;
+                                                        const isPracExpanded = expandedAcademicRows.has(pracKey);
+                                                        return (
+                                                            <React.Fragment key={pracKey}>
+                                                                <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(pracKey) ? (p.delete(pracKey), new Set(p)) : new Set(p.add(pracKey)))}>
+                                                                    <td className="p-2 pl-6 text-left">Ex. Práctico</td>
+                                                                    <td className="p-2 font-bold">{grades.length > 0 ? avg.toFixed(2) : '-'}</td>
+                                                                    <td className="p-2">{isPracExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}</td>
+                                                                </tr>
+                                                                {isPracExpanded && examenesInPeriod.map(act => {
+                                                                    const g = instrumentGrades[student.id]?.[act.id];
+                                                                    const grade = typeof g === 'object' && g !== null && 'normal' in g ? g.normal : (typeof g === 'number' ? g : null);
+                                                                    return (
+                                                                        <tr key={act.id} className="bg-gray-50 text-xs">
+                                                                            <td className="p-2 pl-12 text-left">{act.name}</td>
+                                                                            <td className="p-2 font-medium">{grade?.toFixed(2) ?? '-'}</td>
+                                                                            <td className="p-2"></td>
+                                                                        </tr>
+                                                                    )
+                                                                })}
+                                                            </React.Fragment>
+                                                        )
+                                                    })()}
+                                                </>
+                                            )}
+                                        </React.Fragment>
+                                    )
+                                })}
                              </tbody>
                         </table>
                     </div>
