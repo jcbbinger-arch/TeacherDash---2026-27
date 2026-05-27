@@ -2,6 +2,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { ToastContainer } from './components/Toast';
+import LoginPage from './pages/LoginPage';
 
 // Lazy load views for better performance and code splitting
 const Header = lazy(() => import('./components/Header'));
@@ -29,7 +30,10 @@ const AppContent: React.FC = () => {
     const [initialServiceTab, setInitialServiceTab] = useState<'planning' | 'evaluation' | null>(null);
     const [isFocusMode, setIsFocusMode] = useState(false);
     
-    const { toasts } = useAppContext();
+    const { toasts, user, loading } = useAppContext();
+    
+    if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>;
+    if (!user) return <LoginPage />;
     
     // --- NAVIGATION HELPERS ---
     const handleNavigateToService = (serviceId: string, tab: 'planning' | 'evaluation' | null = 'planning') => {

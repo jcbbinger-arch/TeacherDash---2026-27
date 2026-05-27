@@ -6,6 +6,8 @@ import {
     ResultadoAprendizaje, CriterioEvaluacion, InstrumentoEvaluacion, Profesor, UnidadTrabajo, InstrumentGrades,
 } from '../types';
 import { parseFile } from '../services/csvParser';
+import { auth, signInWithGoogle, logout } from '../lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 import { resultadosAprendizaje as mockRA } from '../data/ra-data';
 import { criteriosEvaluacion as mockCriterios } from '../data/criterios-data';
@@ -169,6 +171,12 @@ interface AppContextType {
 
     handleResetApp: () => void;
     
+    // Auth
+    user: User | null;
+    loading: boolean;
+    signIn: () => Promise<void>;
+    signOut: () => Promise<void>;
+    
     calculatedStudentGrades: Record<string, StudentCalculatedGrades>;
 }
 
@@ -220,6 +228,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [profesores, setProfesores] = useLocalStorage<Profesor[]>('profesores', mockProfesores);
     const [toasts, setToasts] = useState<Toast[]>([]);
+    
+    // Auth
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+        return unsubscribe;
+    }, []);
 
     const addToast = (message: string, type: ToastType = 'info') => {
         const id = new Date().getTime().toString();
@@ -515,6 +535,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleSaveProyectoRA: proyectoCRUD.handleSaveRA, handleDeleteProyectoRA: proyectoCRUD.handleDeleteRA, handleSaveProyectoCriterio: proyectoCRUD.handleSaveCriterio, handleDeleteProyectoCriterio: proyectoCRUD.handleDeleteCriterio, handleSaveProyectoUT: proyectoCRUD.handleSaveUT, handleDeleteProyectoUT: proyectoCRUD.handleDeleteUT, handleDeleteProyectoInstrumento: proyectoCRUD.handleDeleteInstrumento,
 
         handleResetApp,
+        
+        user,
+        loading,
+        signIn: signInWithGoogle,
+        signOut: logout,
+
         calculatedStudentGrades
     };
 
