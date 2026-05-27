@@ -204,15 +204,15 @@ const GradesMatrix: React.FC<{
                         {instrument.activities.map(act => (
                             <React.Fragment key={act.id}>
                                 <th className="p-1 border text-center">
-                                     <button onClick={() => toggleColumnLock(act.id, 'isLockedNormal')} className="block mx-auto text-red-500 hover:text-red-700">🔒</button>
+                                     <button onClick={() => toggleColumnLock(act.id, 'isLockedNormal')} className={`block mx-auto ${((instrumentGrades[sortedStudents[0]?.id]?.[act.id] as ActivityGrade)?.isLockedNormal) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
                                      Nota
                                 </th>
                                 <th className="p-1 border text-center">
-                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec1')} className="block mx-auto text-red-500 hover:text-red-700">🔒</button>
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec1')} className={`block mx-auto ${((instrumentGrades[sortedStudents[0]?.id]?.[act.id] as ActivityGrade)?.isLockedRec1) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
                                      Rec 1
                                 </th>
                                 <th className="p-1 border text-center">
-                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec2')} className="block mx-auto text-red-500 hover:text-red-700">🔒</button>
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec2')} className={`block mx-auto ${((instrumentGrades[sortedStudents[0]?.id]?.[act.id] as ActivityGrade)?.isLockedRec2) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
                                      Rec 2
                                 </th>
                                 <th className="p-1 border text-center">Final</th>
