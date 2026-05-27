@@ -83,26 +83,61 @@ const ModuleDashboardView: React.FC<ModuleDashboardViewProps> = ({ module, onNav
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50 uppercase">
                             <tr>
                                 <th className="px-6 py-3">Alumno</th>
-                                <th className="px-6 py-3">Servicios T1</th>
-                                <th className="px-6 py-3">Servicios T2</th>
-                                <th className="px-6 py-3">Servicios T3</th>
-                                <th className="px-6 py-3">Practico T1</th>
-                                <th className="px-6 py-3">Practico T2</th>
-                                <th className="px-6 py-3">Practico T3</th>
+                                {module === 'pc' ? (
+                                    <>
+                                        <th className="px-6 py-3">Servicios T1</th>
+                                        <th className="px-6 py-3">Servicios T2</th>
+                                        <th className="px-6 py-3">Servicios T3</th>
+                                        <th className="px-6 py-3">Practico T1</th>
+                                        <th className="px-6 py-3">Practico T2</th>
+                                        <th className="px-6 py-3">Practico T3</th>
+                                    </>
+                                ) : (
+                                    <>
+                                        <th className="px-6 py-3">T1</th>
+                                        <th className="px-6 py-3">T2</th>
+                                        <th className="px-6 py-3">T3</th>
+                                        <th className="px-6 py-3">Rec</th>
+                                    </>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
                             {context.students.map(student => {
-                                const grades = context.calculatedStudentGrades[student.id];
                                 return (
                                     <tr key={student.id} className="bg-white border-b hover:bg-gray-50">
                                         <td className="px-6 py-4 font-medium text-gray-900">{student.nombre} {student.apellido1} {student.apellido2}</td>
-                                        <td className="px-6 py-4">{grades?.serviceAverages.t1 ?? '-'}</td>
-                                        <td className="px-6 py-4">{grades?.serviceAverages.t2 ?? '-'}</td>
-                                        <td className="px-6 py-4">{grades?.serviceAverages.t3 ?? '-'}</td>
-                                        <td className="px-6 py-4">{grades?.practicalExams.t1 ?? '-'}</td>
-                                        <td className="px-6 py-4">{grades?.practicalExams.t2 ?? '-'}</td>
-                                        <td className="px-6 py-4">{grades?.practicalExams.t3 ?? '-'}</td>
+                                        {module === 'pc' ? (
+                                            <>
+                                                {(() => {
+                                                    const grades = context.calculatedStudentGrades[student.id];
+                                                    return (
+                                                        <>
+                                                            <td className="px-6 py-4">{grades?.serviceAverages.t1 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.serviceAverages.t2 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.serviceAverages.t3 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.practicalExams.t1 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.practicalExams.t2 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.practicalExams.t3 ?? '-'}</td>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {(() => {
+                                                    const grades = context.courseGrades[student.id]?.[module];
+                                                    return (
+                                                        <>
+                                                            <td className="px-6 py-4">{grades?.t1 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.t2 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.t3 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{grades?.rec ?? '-'}</td>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </>
+                                        )}
                                     </tr>
                                 );
                             })}
