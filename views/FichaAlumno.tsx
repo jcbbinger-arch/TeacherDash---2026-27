@@ -121,7 +121,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
     students,
     teacherData, 
     instituteData,
-    pcResultadosAprendizaje, pcCriteriosEvaluacion,
+    pcResultadosAprendizaje, pcCriteriosEvaluacion, pcInstrumentosEvaluacion,
     optativaResultadosAprendizaje, optativaCriteriosEvaluacion, optativaInstrumentosEvaluacion,
     proyectoResultadosAprendizaje, proyectoCriteriosEvaluacion, proyectoInstrumentosEvaluacion,
     academicGrades: allAcademicGrades,
