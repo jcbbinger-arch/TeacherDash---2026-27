@@ -562,7 +562,16 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                         if (instrument.key === 'servicios') {
                                             items = studentServicesData.filter(s => s.service.trimester === period.key).map(s => ({ name: s.service.name, grade: s.studentGrade }));
                                         } else if (instrument.key.startsWith('exPractico')) {
-                                            // TODO: get individual practical exam components if available
+                                            const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre.includes('Práctico') || inst.nombre.includes('Práctica'));
+                                            if (pracInstrument) {
+                                                items = pracInstrument.activities
+                                                    .filter(act => act.trimester === period.key) // Assuming activity has trimester property
+                                                    .map(act => {
+                                                        const grades = instrumentGrades[student.id]?.[act.id];
+                                                        const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
+                                                        return { name: act.name, grade: grade };
+                                                    });
+                                            }
                                         }
 
                                         return (
