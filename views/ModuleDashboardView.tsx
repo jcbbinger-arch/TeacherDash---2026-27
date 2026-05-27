@@ -85,12 +85,10 @@ const ModuleDashboardView: React.FC<ModuleDashboardViewProps> = ({ module, onNav
                                 <th className="px-6 py-3">Alumno</th>
                                 {module === 'pc' ? (
                                     <>
-                                        <th className="px-6 py-3">Servicios T1</th>
-                                        <th className="px-6 py-3">Servicios T2</th>
-                                        <th className="px-6 py-3">Servicios T3</th>
-                                        <th className="px-6 py-3">Practico T1</th>
-                                        <th className="px-6 py-3">Practico T2</th>
-                                        <th className="px-6 py-3">Practico T3</th>
+                                        <th className="px-6 py-3">Examen 1 (T1)</th>
+                                        <th className="px-6 py-3">Examen 2 (T2)</th>
+                                        <th className="px-6 py-3">Servicios</th>
+                                        <th className="px-6 py-3">Práctico</th>
                                     </>
                                 ) : (
                                     <>
@@ -110,15 +108,23 @@ const ModuleDashboardView: React.FC<ModuleDashboardViewProps> = ({ module, onNav
                                         {module === 'pc' ? (
                                             <>
                                                 {(() => {
-                                                    const grades = context.calculatedStudentGrades[student.id];
+                                                    const examInstrument = Object.values(context.pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
+                                                    const getExamGrade = (activityName: string) => {
+                                                        const activity = examInstrument?.activities.find(act => act.name === activityName);
+                                                        if (!activity) return '-';
+                                                        const grades = context.instrumentGrades[student.id]?.[activity.id];
+                                                        const gradeObj = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : null;
+                                                        if (!gradeObj) return typeof grades === 'number' ? grades.toFixed(2) : '-';
+                                                        return Math.max(gradeObj.normal ?? 0, gradeObj.rec1 ?? 0, gradeObj.rec2 ?? 0).toFixed(2);
+                                                    };
+                                                    const studentGrades = context.calculatedStudentGrades[student.id];
+
                                                     return (
                                                         <>
-                                                            <td className="px-6 py-4">{grades?.serviceAverages.t1 ?? '-'}</td>
-                                                            <td className="px-6 py-4">{grades?.serviceAverages.t2 ?? '-'}</td>
-                                                            <td className="px-6 py-4">{grades?.serviceAverages.t3 ?? '-'}</td>
-                                                            <td className="px-6 py-4">{grades?.practicalExams.t1 ?? '-'}</td>
-                                                            <td className="px-6 py-4">{grades?.practicalExams.t2 ?? '-'}</td>
-                                                            <td className="px-6 py-4">{grades?.practicalExams.t3 ?? '-'}</td>
+                                                            <td className="px-6 py-4">{getExamGrade('Examen 1')}</td>
+                                                            <td className="px-6 py-4">{getExamGrade('Examen 2')}</td>
+                                                            <td className="px-6 py-4">{((studentGrades?.serviceAverages.t1 ?? 0) + (studentGrades?.serviceAverages.t2 ?? 0) + (studentGrades?.serviceAverages.t3 ?? 0)).toFixed(2)}</td>
+                                                            <td className="px-6 py-4">{((studentGrades?.practicalExams.t1 ?? 0) + (studentGrades?.practicalExams.t2 ?? 0) + (studentGrades?.practicalExams.t3 ?? 0)).toFixed(2)}</td>
                                                         </>
                                                     );
                                                 })()}

@@ -311,7 +311,21 @@ const GestionAcademicaView: React.FC = () => {
                                                     return (
                                                     <td key={`${period.key}-${instrument.key}`} className={`border ${instrument.type === 'calculated' ? 'bg-blue-50' : ''}`}>
                                                     {instrument.type === 'manual' ? (
-                                                        <input type="number" step="0.1" min="0" max="10" value={localAcademicGrades[student.id]?.[period.key]?.manualGrades?.[instrument.key] ?? ''} onChange={e => handleManualGradeChange(student.id, period.key, instrument.key, e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none"/>
+                                                        instrument.key === 'examen1' || instrument.key === 'examen2' ? (
+                                                            <span className="p-1.5 block font-medium">
+                                                                {(() => {
+                                                                    const examInstrument = Object.values(context.pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
+                                                                    const activityName = instrument.key === 'examen1' ? 'Examen 1' : 'Examen 2';
+                                                                    const activity = examInstrument?.activities.find(act => act.name === activityName);
+                                                                    if (!activity) return '-';
+                                                                    const grades = context.instrumentGrades[student.id]?.[activity.id];
+                                                                    const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
+                                                                    return grade !== null ? grade.toFixed(2) : '-';
+                                                                })()}
+                                                            </span>
+                                                        ) : (
+                                                            <input type="number" step="0.1" min="0" max="10" value={localAcademicGrades[student.id]?.[period.key]?.manualGrades?.[instrument.key] ?? ''} onChange={e => handleManualGradeChange(student.id, period.key, instrument.key, e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none"/>
+                                                        )
                                                     ) : (<span className="p-1.5 block">{calculatedGrade !== null ? calculatedGrade.toFixed(2) : '-'}</span>)}
                                                     </td>
                                                 )}),
