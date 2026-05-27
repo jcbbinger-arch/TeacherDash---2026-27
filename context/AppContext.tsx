@@ -8,6 +8,8 @@ import {
 import { parseFile } from '../services/csvParser';
 import { auth, signInWithGoogle, logout } from '../lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, setDoc, getDocs, collection, serverTimestamp, getDocFromServer } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 import { resultadosAprendizaje as mockRA } from '../data/ra-data';
 import { criteriosEvaluacion as mockCriterios } from '../data/criterios-data';
@@ -15,6 +17,111 @@ import { instrumentosEvaluacion as mockInstrumentos } from '../data/instrumentos
 import { profesores as mockProfesores } from '../data/profesores-data';
 import { unidadesTrabajo as mockUTs } from '../data/ut-data';
 import { SERVICE_GRADE_WEIGHTS } from '../data/constants';
+
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// --- Custom Hook for Local Storage with Offline Firestore Sync ---
+function useSyncedState<T>(key: string, initialValue: T, user: User | null): [T, (val: T | ((curr: T) => T)) => void, React.Dispatch<React.SetStateAction<T>>] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      if (item === null || item === 'undefined') {
+          return initialValue;
+      }
+      const parsedItem = JSON.parse(item);
+      if (parsedItem === null && initialValue !== null) {
+          return initialValue;
+      }
+      if (key === 'services' && Array.isArray(parsedItem)) {
+          return parsedItem.map((s: any) => ({
+              ...s,
+              type: s.type || 'normal'
+          })) as unknown as T;
+      }
+      return parsedItem;
+    } catch (error) {
+      console.error(`Error reading localStorage key “${key}”:`, error);
+      return initialValue;
+    }
+  });
+
+  const setSyncedValue = (newValue: T | ((curr: T) => T)) => {
+    setValue(prev => {
+      const valueToStore = newValue instanceof Function ? newValue(prev) : newValue;
+      try {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      } catch (error) {
+        console.error(error);
+      }
+      if (user) {
+        setDoc(doc(db, 'users', user.uid, 'data', key), {
+          data: valueToStore,
+          updatedAt: serverTimestamp()
+        }).catch(err => console.error("Error setting doc:", err));
+      }
+      return valueToStore;
+    });
+  };
+
+  return [value, setSyncedValue, setValue];
+}
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 
 
 // --- Custom Hook for Local Storage ---
@@ -183,53 +290,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Basic Data States
-    const [students, setStudents] = useLocalStorage<Student[]>('students', []);
-    const [practiceGroups, setPracticeGroups] = useLocalStorage<PracticeGroup[]>('practiceGroups', []);
-    const [services, setServices] = useLocalStorage<Service[]>('services', []);
-    const [serviceEvaluations, setServiceEvaluations] = useLocalStorage<ServiceEvaluation[]>('serviceEvaluations', []);
-    const [serviceRoles, setServiceRoles] = useLocalStorage<ServiceRole[]>('serviceRoles', [
-        { id: 'role1', name: 'Jefe de Cocina', color: '#ef4444', type: 'leader' },
-        { id: 'role2', name: 'Segundo de Cocina', color: '#f97316', type: 'leader' },
-        { id: 'role3', name: 'Jefe de Partida', color: '#84cc16', type: 'secondary' },
-        { id: 'role4', name: 'Cocinero', color: '#22c55e', type: 'secondary' },
-        { id: 'role5', name: 'Ayudante', color: '#3b82f6', type: 'secondary' },
-    ]);
-    const [entryExitRecords, setEntryExitRecords] = useLocalStorage<EntryExitRecord[]>('entryExitRecords', []);
-
-    // Academic Grades States
-    const [academicGrades, setAcademicGrades] = useLocalStorage<AcademicGrades>('academicGrades', {});
-    const [instrumentGrades, setInstrumentGrades] = useLocalStorage<InstrumentGrades>('instrumentGrades', {});
-    const [courseGrades, setCourseGrades] = useLocalStorage<CourseGrades>('courseGrades', {});
-    const [practicalExamEvaluations, setPracticalExamEvaluations] = useLocalStorage<PracticalExamEvaluation[]>('practicalExamEvaluations', []);
-    
-    // App Config States
-    const [teacherData, setTeacherData] = useLocalStorage<TeacherData>('teacher-app-data', { name: 'Juan Codina Barranco', email: 'juan.codina@murciaeduca.es', logo: null });
-    const [instituteData, setInstituteData] = useLocalStorage<InstituteData>('institute-app-data', { name: 'CIFP Hostelería y Turismo de Cartagena', address: 'Calle Muralla del Mar, 3, 30202 Cartagena, Murcia', cif: 'Q1234567A', logo: null });
-    const [trimesterDates, setTrimesterDates] = useLocalStorage<TrimesterDates>('trimester-dates', defaultTrimesterDates);
-    
-    // PC Module Data
-    const [pcResultadosAprendizaje, setPcResultadosAprendizaje] = useLocalStorage<Record<string, ResultadoAprendizaje>>('pc-resultadosAprendizaje', mockRA);
-    const [pcCriteriosEvaluacion, setPcCriteriosEvaluacion] = useLocalStorage<Record<string, CriterioEvaluacion>>('pc-criteriosEvaluacion', mockCriterios);
-    const [pcInstrumentosEvaluacion, setPcInstrumentosEvaluacion] = useLocalStorage<Record<string, InstrumentoEvaluacion>>('pc-instrumentosEvaluacion', mockInstrumentos);
-    const [pcUnidadesTrabajo, setPcUnidadesTrabajo] = useLocalStorage<Record<string, UnidadTrabajo>>('pc-unidadesTrabajo', mockUTs);
-
-    // Optativa Module Data
-    const [optativaResultadosAprendizaje, setOptativaResultadosAprendizaje] = useLocalStorage<Record<string, ResultadoAprendizaje>>('optativa-resultadosAprendizaje', {});
-    const [optativaCriteriosEvaluacion, setOptativaCriteriosEvaluacion] = useLocalStorage<Record<string, CriterioEvaluacion>>('optativa-criteriosEvaluacion', {});
-    const [optativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacion] = useLocalStorage<Record<string, InstrumentoEvaluacion>>('optativa-instrumentosEvaluacion', {});
-    const [optativaUnidadesTrabajo, setOptativaUnidadesTrabajo] = useLocalStorage<Record<string, UnidadTrabajo>>('optativa-unidadesTrabajo', {});
-
-    // Proyecto Module Data
-    const [proyectoResultadosAprendizaje, setProyectoResultadosAprendizaje] = useLocalStorage<Record<string, ResultadoAprendizaje>>('proyecto-resultadosAprendizaje', {});
-    const [proyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacion] = useLocalStorage<Record<string, CriterioEvaluacion>>('proyecto-criteriosEvaluacion', {});
-    const [proyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacion] = useLocalStorage<Record<string, InstrumentoEvaluacion>>('proyecto-instrumentosEvaluacion', {});
-    const [proyectoUnidadesTrabajo, setProyectoUnidadesTrabajo] = useLocalStorage<Record<string, UnidadTrabajo>>('proyecto-unidadesTrabajo', {});
-
-    const [profesores, setProfesores] = useLocalStorage<Profesor[]>('profesores', mockProfesores);
-    const [toasts, setToasts] = useState<Toast[]>([]);
-    
-    // Auth
+    // Auth (Placed first so it can be passed to useSyncedState hooks)
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -240,6 +301,143 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         return unsubscribe;
     }, []);
+
+    // Basic Data States with Sync
+    const [students, setStudents, setStudentsRaw] = useSyncedState<Student[]>('students', [], user);
+    const [practiceGroups, setPracticeGroups, setPracticeGroupsRaw] = useSyncedState<PracticeGroup[]>('practiceGroups', [], user);
+    const [services, setServices, setServicesRaw] = useSyncedState<Service[]>('services', [], user);
+    const [serviceEvaluations, setServiceEvaluations, setServiceEvaluationsRaw] = useSyncedState<ServiceEvaluation[]>('serviceEvaluations', [], user);
+    const [serviceRoles, setServiceRoles, setServiceRolesRaw] = useSyncedState<ServiceRole[]>('serviceRoles', [
+        { id: 'role1', name: 'Jefe de Cocina', color: '#ef4444', type: 'leader' },
+        { id: 'role2', name: 'Segundo de Cocina', color: '#f97316', type: 'leader' },
+        { id: 'role3', name: 'Jefe de Partida', color: '#84cc16', type: 'secondary' },
+        { id: 'role4', name: 'Cocinero', color: '#22c55e', type: 'secondary' },
+        { id: 'role5', name: 'Ayudante', color: '#3b82f6', type: 'secondary' },
+    ], user);
+    const [entryExitRecords, setEntryExitRecords, setEntryExitRecordsRaw] = useSyncedState<EntryExitRecord[]>('entryExitRecords', [], user);
+
+    // Academic Grades States
+    const [academicGrades, setAcademicGrades, setAcademicGradesRaw] = useSyncedState<AcademicGrades>('academicGrades', {}, user);
+    const [instrumentGrades, setInstrumentGrades, setInstrumentGradesRaw] = useSyncedState<InstrumentGrades>('instrumentGrades', {}, user);
+    const [courseGrades, setCourseGrades, setCourseGradesRaw] = useSyncedState<CourseGrades>('courseGrades', {}, user);
+    const [practicalExamEvaluations, setPracticalExamEvaluations, setPracticalExamEvaluationsRaw] = useSyncedState<PracticalExamEvaluation[]>('practicalExamEvaluations', [], user);
+    
+    // App Config States
+    const [teacherData, setTeacherData, setTeacherDataRaw] = useSyncedState<TeacherData>('teacher-app-data', { name: 'Juan Codina Barranco', email: 'juan.codina@murciaeduca.es', logo: null }, user);
+    const [instituteData, setInstituteData, setInstituteDataRaw] = useSyncedState<InstituteData>('institute-app-data', { name: 'CIFP Hostelería y Turismo de Cartagena', address: 'Calle Muralla del Mar, 3, 30202 Cartagena, Murcia', cif: 'Q1234567A', logo: null }, user);
+    const [trimesterDates, setTrimesterDates, setTrimesterDatesRaw] = useSyncedState<TrimesterDates>('trimester-dates', defaultTrimesterDates, user);
+    
+    // PC Module Data
+    const [pcResultadosAprendizaje, setPcResultadosAprendizaje, setPcResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('pc-resultadosAprendizaje', mockRA, user);
+    const [pcCriteriosEvaluacion, setPcCriteriosEvaluacion, setPcCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('pc-criteriosEvaluacion', mockCriterios, user);
+    const [pcInstrumentosEvaluacion, setPcInstrumentosEvaluacion, setPcInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('pc-instrumentosEvaluacion', mockInstrumentos, user);
+    const [pcUnidadesTrabajo, setPcUnidadesTrabajo, setPcUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('pc-unidadesTrabajo', mockUTs, user);
+
+    // Optativa Module Data
+    const [optativaResultadosAprendizaje, setOptativaResultadosAprendizaje, setOptativaResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('optativa-resultadosAprendizaje', {}, user);
+    const [optativaCriteriosEvaluacion, setOptativaCriteriosEvaluacion, setOptativaCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('optativa-criteriosEvaluacion', {}, user);
+    const [optativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacion, setOptativaInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('optativa-instrumentosEvaluacion', {}, user);
+    const [optativaUnidadesTrabajo, setOptativaUnidadesTrabajo, setOptativaUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('optativa-unidadesTrabajo', {}, user);
+
+    // Proyecto Module Data
+    const [proyectoResultadosAprendizaje, setProyectoResultadosAprendizaje, setProyectoResultadosAprendizajeRaw] = useSyncedState<Record<string, ResultadoAprendizaje>>('proyecto-resultadosAprendizaje', {}, user);
+    const [proyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacion, setProyectoCriteriosEvaluacionRaw] = useSyncedState<Record<string, CriterioEvaluacion>>('proyecto-criteriosEvaluacion', {}, user);
+    const [proyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacion, setProyectoInstrumentosEvaluacionRaw] = useSyncedState<Record<string, InstrumentoEvaluacion>>('proyecto-instrumentosEvaluacion', {}, user);
+    const [proyectoUnidadesTrabajo, setProyectoUnidadesTrabajo, setProyectoUnidadesTrabajoRaw] = useSyncedState<Record<string, UnidadTrabajo>>('proyecto-unidadesTrabajo', {}, user);
+
+    const [profesores, setProfesores, setProfesoresRaw] = useSyncedState<Profesor[]>('profesores', mockProfesores, user);
+    const [toasts, setToasts] = useState<Toast[]>([]);
+
+    // Sync effect: executes whenever Google sign-in completes to either restore remote data or back up local offline progress
+    useEffect(() => {
+        const syncData = async () => {
+            if (!user) return;
+            
+            try {
+                addToast("Sincronizando datos con la base de datos remota...", "info");
+                
+                await setDoc(doc(db, 'users', user.uid), {
+                    uid: user.uid,
+                    email: user.email || '',
+                    updatedAt: serverTimestamp()
+                });
+
+                const dataPath = `users/${user.uid}/data`;
+                let querySnapshot;
+                try {
+                    querySnapshot = await getDocs(collection(db, 'users', user.uid, 'data'));
+                } catch (err) {
+                    handleFirestoreError(err, OperationType.GET, dataPath);
+                    return;
+                }
+
+                const firestoreData: Record<string, any> = {};
+                querySnapshot.forEach(docSnap => {
+                    const docData = docSnap.data();
+                    if (docData && docData.data !== undefined) {
+                        firestoreData[docSnap.id] = docData.data;
+                    }
+                });
+
+                const syncConfigs = [
+                    { key: 'students', current: students, rawSetter: setStudentsRaw },
+                    { key: 'practiceGroups', current: practiceGroups, rawSetter: setPracticeGroupsRaw },
+                    { key: 'services', current: services, rawSetter: setServicesRaw },
+                    { key: 'serviceEvaluations', current: serviceEvaluations, rawSetter: setServiceEvaluationsRaw },
+                    { key: 'serviceRoles', current: serviceRoles, rawSetter: setServiceRolesRaw },
+                    { key: 'entryExitRecords', current: entryExitRecords, rawSetter: setEntryExitRecordsRaw },
+                    { key: 'academicGrades', current: academicGrades, rawSetter: setAcademicGradesRaw },
+                    { key: 'instrumentGrades', current: instrumentGrades, rawSetter: setInstrumentGradesRaw },
+                    { key: 'courseGrades', current: courseGrades, rawSetter: setCourseGradesRaw },
+                    { key: 'practicalExamEvaluations', current: practicalExamEvaluations, rawSetter: setPracticalExamEvaluationsRaw },
+                    { key: 'teacher-app-data', current: teacherData, rawSetter: setTeacherDataRaw },
+                    { key: 'institute-app-data', current: instituteData, rawSetter: setInstituteDataRaw },
+                    { key: 'trimester-dates', current: trimesterDates, rawSetter: setTrimesterDatesRaw },
+                    { key: 'profesores', current: profesores, rawSetter: setProfesoresRaw },
+                    { key: 'pc-resultadosAprendizaje', current: pcResultadosAprendizaje, rawSetter: setPcResultadosAprendizajeRaw },
+                    { key: 'pc-criteriosEvaluacion', current: pcCriteriosEvaluacion, rawSetter: setPcCriteriosEvaluacionRaw },
+                    { key: 'pc-instrumentosEvaluacion', current: pcInstrumentosEvaluacion, rawSetter: setPcInstrumentosEvaluacionRaw },
+                    { key: 'pc-unidadesTrabajo', current: pcUnidadesTrabajo, rawSetter: setPcUnidadesTrabajoRaw },
+                    { key: 'optativa-resultadosAprendizaje', current: optativaResultadosAprendizaje, rawSetter: setOptativaResultadosAprendizajeRaw },
+                    { key: 'optativa-criteriosEvaluacion', current: optativaCriteriosEvaluacion, rawSetter: setOptativaCriteriosEvaluacionRaw },
+                    { key: 'optativa-instrumentosEvaluacion', current: optativaInstrumentosEvaluacion, rawSetter: setOptativaInstrumentosEvaluacionRaw },
+                    { key: 'optativa-unidadesTrabajo', current: optativaUnidadesTrabajo, rawSetter: setOptativaUnidadesTrabajoRaw },
+                    { key: 'proyecto-resultadosAprendizaje', current: proyectoResultadosAprendizaje, rawSetter: setProyectoResultadosAprendizajeRaw },
+                    { key: 'proyecto-criteriosEvaluacion', current: proyectoCriteriosEvaluacion, rawSetter: setProyectoCriteriosEvaluacionRaw },
+                    { key: 'proyecto-instrumentosEvaluacion', current: proyectoInstrumentosEvaluacion, rawSetter: setProyectoInstrumentosEvaluacionRaw },
+                    { key: 'proyecto-unidadesTrabajo', current: proyectoUnidadesTrabajo, rawSetter: setProyectoUnidadesTrabajoRaw },
+                ];
+
+                for (const config of syncConfigs) {
+                    const remoteData = firestoreData[config.key];
+                    if (remoteData !== undefined) {
+                        config.rawSetter(remoteData);
+                        try {
+                            window.localStorage.setItem(config.key, JSON.stringify(remoteData));
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    } else {
+                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
+                        try {
+                            await setDoc(docRef, {
+                                data: config.current,
+                                updatedAt: serverTimestamp()
+                            });
+                        } catch (err) {
+                            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/data/${config.key}`);
+                        }
+                    }
+                }
+                addToast("Sincronización finalizada correctamente", "success");
+            } catch (error) {
+                console.error("Definitive Sync Failure:", error);
+                addToast("Fallo al actualizar la sincronización con base de datos", "error");
+            }
+        };
+
+        syncData();
+    }, [user]);
 
     const addToast = (message: string, type: ToastType = 'info') => {
         const id = new Date().getTime().toString();

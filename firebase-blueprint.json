@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile or metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
+    },
+    "UserDataDoc": {
+      "title": "User Data Document",
+      "description": "A document containing a portion of the synchronized application state: students, services, evaluations, grades etc.",
+      "type": "object",
+      "properties": {
+        "data": { "type": "object", "description": "Serialized data value of the specific sync node" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Main user collection"
+    },
+    "/users/{userId}/data/{docId}": {
+      "schema": "UserDataDoc",
+      "description": "Synchronized data structures for the user"
+    }
+  }
+}
