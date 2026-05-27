@@ -144,6 +144,53 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
   const [expandedAcademicRows, setExpandedAcademicRows] = useState<Set<string>>(new Set());
   const [activeModuleForRA, setActiveModuleForRA] = useState<'pc' | 'optativa' | 'proyecto'>('pc');
 
+  const examsByTrimester = useMemo(() => {
+    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
+    if (!examInstrument) return { t1: [], t2: [], t3: [] };
+    return {
+        t1: examInstrument.activities.filter(a => a.trimester === 't1'),
+        t2: examInstrument.activities.filter(a => a.trimester === 't2'),
+        t3: examInstrument.activities.filter(a => a.trimester === 't3')
+    };
+  }, [pcInstrumentosEvaluacion]);
+
+  const renderExamsForTrimester = (trimester: 't1' | 't2' | 't3', label: string) => {
+      const activities = examsByTrimester[trimester];
+      if (activities.length === 0) return null;
+      const key = `exam-${trimester}`;
+      const isExpanded = expandedAcademicRows.has(key);
+      const avgGrade = activities.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / activities.length;
+      
+      return (
+          <React.Fragment key={key}>
+              <tr className="border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(key) ? (p.delete(key), new Set(p)) : new Set(p.add(key)))}>
+                  <td className="p-2 font-medium text-left">{label}</td>
+                  <td className="p-2 font-bold">{activities.length > 0 ? avgGrade.toFixed(2) : '-'}</td>
+                  <td className="p-2" colSpan={3}>
+                      <div className="flex justify-center">
+                          {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
+                      </div>
+                  </td>
+              </tr>
+              {isExpanded && activities.map(act => {
+                  const grades = instrumentGrades[student.id]?.[act.id];
+                  const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
+                  const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
+                  return (
+                      <tr key={act.id} className="bg-gray-50 text-xs">
+                          <td className="p-2 pl-6 text-left">{act.name}</td>
+                          <td className="p-2">{activityGrade.normal ?? '-'}</td>
+                          <td className="p-2">{activityGrade.rec1 ?? '-'}</td>
+                          <td className="p-2">{activityGrade.rec2 ?? '-'}</td>
+                          <td className="p-2 font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
+                      </tr>
+                  );
+              })}
+          </React.Fragment>
+      );
+  };
+
+
 
   const fullName = `${student.apellido1} ${student.apellido2}, ${student.nombre}`.trim();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -507,41 +554,34 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                  </tr>
                              </thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
-                                 {Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen')?.activities.map(act => {
-                                      const grades = instrumentGrades[student.id]?.[act.id];
-                                      const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
-                                      const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
-                                      return (
-                                          <tr key={act.id}>
-                                              <td className="p-2 font-medium">{act.name}</td>
-                                              <td className="p-2">{activityGrade.normal ?? '-'}</td>
-                                              <td className="p-2">{activityGrade.rec1 ?? '-'}</td>
-                                              <td className="p-2">{activityGrade.rec2 ?? '-'}</td>
-                                              <td className="p-2 font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
-                                          </tr>
-                                      )
-                                 })}
+                                 {renderExamsForTrimester('t1', '1º Trimestre')}
+                                     {renderExamsForTrimester('t2', '2º Trimestre')}
+                                     {renderExamsForTrimester('t3', '3º Trimestre')}
+                                     <tr className="bg-gray-100 font-bold border-t">
+                                         <td className="p-2 text-left">Nota Final</td>
+                                         <td className="p-2" colSpan={4}>-</td>
+                                     </tr>
                              </tbody>
                         </table>
 
                          <h4 className="font-bold text-gray-700 mb-2">Servicios y Prácticos (Averages)</h4>
                          <table className="min-w-full text-sm text-center">
-                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Calificación</th>{ACADEMIC_EVALUATION_STRUCTURE.periods.map(p => <th key={p.key} className="px-4 py-3">{p.name}</th>)}</tr></thead>
+                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Calificación</th><th className="px-4 py-3">1º Trimestre</th><th className="px-4 py-3">2º Trimestre</th></tr></thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
                                 {ACADEMIC_EVALUATION_STRUCTURE.periods[0].instruments.filter(i => i.type !== 'manual').map(instrument => {
                                     return (
                                     <React.Fragment key={instrument.key}>
                                     <tr className="border-b">
                                         <td className="px-4 py-2 text-left font-medium">{instrument.name}</td>
-                                        {ACADEMIC_EVALUATION_STRUCTURE.periods.map(period => {
+                                        {['t1', 't2'].map(pKey => {
                                              let grade: number | null = null;
                                              if (instrument.key === 'servicios') {
-                                                 grade = allCalculatedGrades[student.id]?.serviceAverages?.[period.key as 't1' | 't2' | 't3'] ?? null;
+                                                 grade = allCalculatedGrades[student.id]?.serviceAverages?.[pKey as 't1' | 't2' | 't3'] ?? null;
                                              } else if (instrument.key.startsWith('exPractico')) {
-                                                 const periodKey = period.key as keyof StudentCalculatedGrades['practicalExams'];
+                                                 const periodKey = pKey as keyof StudentCalculatedGrades['practicalExams'];
                                                  grade = allCalculatedGrades[student.id]?.practicalExams?.[periodKey] ?? null;
                                              }
-                                             const key = `${period.key}-${instrument.key}`;
+                                             const key = `${pKey}-${instrument.key}`;
                                              const isExpanded = expandedAcademicRows.has(key);
                                             return (
                                                 <td key={key} className="px-4 py-2 cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => p.has(key) ? (p.delete(key), new Set(p)) : new Set(p.add(key)))}>
@@ -553,19 +593,19 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                             )
                                         })}
                                     </tr>
-                                    {ACADEMIC_EVALUATION_STRUCTURE.periods.map(period => {
-                                        const key = `${period.key}-${instrument.key}`;
+                                    {['t1', 't2'].map(pKey => {
+                                        const key = `${pKey}-${instrument.key}`;
                                         if (!expandedAcademicRows.has(key)) return null;
                                         
                                         // Componentes
                                         let items: { name: string, grade: number | null }[] = [];
                                         if (instrument.key === 'servicios') {
-                                            items = studentServicesData.filter(s => s.service.trimester === period.key).map(s => ({ name: s.service.name, grade: s.studentGrade }));
+                                            items = studentServicesData.filter(s => s.service.trimester === pKey).map(s => ({ name: s.service.name, grade: s.studentGrade }));
                                         } else if (instrument.key.startsWith('exPractico')) {
                                             const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre.includes('Práctico') || inst.nombre.includes('Práctica'));
                                             if (pracInstrument) {
                                                 items = pracInstrument.activities
-                                                    .filter(act => act.trimester === period.key) // Assuming activity has trimester property
+                                                    .filter(act => act.trimester === pKey)
                                                     .map(act => {
                                                         const grades = instrumentGrades[student.id]?.[act.id];
                                                         const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
@@ -576,9 +616,9 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
 
                                         return (
                                             <tr key={`expanded-${key}`} className="bg-gray-50 text-xs">
-                                                <td colSpan={4} className="p-2">
+                                                <td colSpan={3} className="p-2 text-left">
                                                     <div className="flex flex-wrap gap-2">
-                                                        {items.map(item => <span key={item.name} className="bg-white border rounded px-1.5 py-0.5">{item.name}: {item.grade?.toFixed(2) ?? '-'}</span>)}
+                                                        {items.length > 0 ? items.map(item => <span key={item.name} className="bg-white border rounded px-1.5 py-0.5">{item.name}: {item.grade?.toFixed(2) ?? '-'}</span>) : <span className="text-gray-400">Sin datos</span>}
                                                     </div>
                                                 </td>
                                             </tr>
