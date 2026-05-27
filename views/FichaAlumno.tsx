@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Student, TimelineEvent, PreServiceDayEvaluation, ResultadoAprendizaje, Service, CourseModuleGrades, GradeValue, CriterioEvaluacion, StudentCalculatedGrades } from '../types';
+import { Student, TimelineEvent, PreServiceDayEvaluation, ResultadoAprendizaje, Service, CourseModuleGrades, GradeValue, CriterioEvaluacion, StudentCalculatedGrades, ActivityGrade } from '../types';
 import { 
     PencilIcon,
     CameraIcon,

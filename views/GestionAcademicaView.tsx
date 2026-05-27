@@ -143,6 +143,7 @@ const GestionAcademicaView: React.FC = () => {
         instrumentGrades, 
         optativaInstrumentosEvaluacion,
         proyectoInstrumentosEvaluacion,
+        pcInstrumentosEvaluacion,
         teacherData, instituteData, addToast 
     } = useAppContext();
     
@@ -314,11 +315,11 @@ const GestionAcademicaView: React.FC = () => {
                                                         instrument.key === 'examen1' || instrument.key === 'examen2' ? (
                                                             <span className="p-1.5 block font-medium">
                                                                 {(() => {
-                                                                    const examInstrument = Object.values(context.pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
+                                                                    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
                                                                     const activityName = instrument.key === 'examen1' ? 'Examen 1' : 'Examen 2';
                                                                     const activity = examInstrument?.activities.find(act => act.name === activityName);
                                                                     if (!activity) return '-';
-                                                                    const grades = context.instrumentGrades[student.id]?.[activity.id];
+                                                                    const grades = instrumentGrades[student.id]?.[activity.id];
                                                                     const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
                                                                     return grade !== null ? grade.toFixed(2) : '-';
                                                                 })()}
