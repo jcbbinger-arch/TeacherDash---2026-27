@@ -492,42 +492,58 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
         {activeTab === 'academico' && (
              <div className="space-y-8">
                 <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                    <h3 className="text-lg font-bold text-gray-800 p-4 border-b">Resumen del Módulo Principal</h3>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm text-center">
+                    <h3 className="text-lg font-bold text-gray-800 p-4 border-b">Resumen Integral de Calificaciones</h3>
+                    <div className="overflow-x-auto p-4">
+                        <h4 className="font-bold text-gray-700 mb-2">Exámenes (PC)</h4>
+                        <table className="min-w-full text-sm text-center mb-6">
+                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
+                                 <tr>
+                                     <th>Examen</th>
+                                     <th>Nota</th>
+                                     <th>Rec 1</th>
+                                     <th>Rec 2</th>
+                                     <th>Nota Final</th>
+                                 </tr>
+                             </thead>
+                             <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+                                 {Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen')?.activities.map(act => {
+                                      const grades = instrumentGrades[student.id]?.[act.id];
+                                      const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
+                                      const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
+                                      return (
+                                          <tr key={act.id}>
+                                              <td className="p-2 font-medium">{act.name}</td>
+                                              <td className="p-2">{activityGrade.normal ?? '-'}</td>
+                                              <td className="p-2">{activityGrade.rec1 ?? '-'}</td>
+                                              <td className="p-2">{activityGrade.rec2 ?? '-'}</td>
+                                              <td className="p-2 font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
+                                          </tr>
+                                      )
+                                 })}
+                             </tbody>
+                        </table>
+
+                         <h4 className="font-bold text-gray-700 mb-2">Servicios y Prácticos (Averages)</h4>
+                         <table className="min-w-full text-sm text-center">
                              <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Calificación</th>{ACADEMIC_EVALUATION_STRUCTURE.periods.map(p => <th key={p.key} className="px-4 py-3">{p.name}</th>)}</tr></thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
-                                {ACADEMIC_EVALUATION_STRUCTURE.periods[0].instruments.map(instrument => {
+                                {ACADEMIC_EVALUATION_STRUCTURE.periods[0].instruments.filter(i => i.type !== 'manual').map(instrument => {
                                     return (
                                     <tr key={instrument.key}>
-                                        <td className="px-4 py-2 text-left font-medium">{instrument.name} ({instrument.weight * 100}%)</td>
+                                        <td className="px-4 py-2 text-left font-medium">{instrument.name}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.map(period => {
                                              let grade: number | null = null;
-                                            if (instrument.type === 'manual') {
-                                                const manualGrade = allAcademicGrades[student.id]?.[period.key]?.manualGrades?.[instrument.key];
-                                                grade = (manualGrade === null || manualGrade === undefined) ? null : parseFloat(String(manualGrade));
-                                            } else { // calculated
-                                                if (instrument.key === 'servicios') {
-                                                    grade = allCalculatedGrades[student.id]?.serviceAverages?.[period.key as 't1' | 't2' | 't3'] ?? null;
-                                                } else if (instrument.key.startsWith('exPractico')) {
-                                                    const periodKey = period.key as keyof StudentCalculatedGrades['practicalExams'];
-                                                    grade = allCalculatedGrades[student.id]?.practicalExams?.[periodKey] ?? null;
-                                                }
-                                            }
+                                             if (instrument.key === 'servicios') {
+                                                 grade = allCalculatedGrades[student.id]?.serviceAverages?.[period.key as 't1' | 't2' | 't3'] ?? null;
+                                             } else if (instrument.key.startsWith('exPractico')) {
+                                                 const periodKey = period.key as keyof StudentCalculatedGrades['practicalExams'];
+                                                 grade = allCalculatedGrades[student.id]?.practicalExams?.[periodKey] ?? null;
+                                             }
                                             return <td key={`${period.key}-${instrument.key}`}>{grade?.toFixed(2) ?? '-'}</td>
                                         })}
                                     </tr>
                                 )})}
                              </tbody>
-                             <tfoot className="bg-gray-100 font-bold">
-                                <tr>
-                                    <td className="px-4 py-2 text-left">Media Ponderada</td>
-                                    {ACADEMIC_EVALUATION_STRUCTURE.periods.map(p => {
-                                        const avg = calculateStudentPeriodAverages(allAcademicGrades[student.id], allCalculatedGrades[student.id])[p.key];
-                                        return <td key={p.key} className={avg !== null && avg < 5 ? 'text-red-600' : ''}>{avg?.toFixed(2) ?? '-'}</td>
-                                    })}
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -535,10 +551,9 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                     <h3 className="text-lg font-bold text-gray-800 p-4 border-b">Resumen de Otros Módulos</h3>
                      <div className="overflow-x-auto">
                            <table className="min-w-full text-sm text-center">
-                                <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Módulo</th><th>T1</th><th>T2</th><th>T3</th><th>REC</th><th className="px-4 py-3">Media Final</th><th className="px-4 py-3">Acción</th></tr></thead>
+                                <thead className="bg-gray-50 text-xs text-gray-600 uppercase"><tr><th className="px-4 py-3 text-left">Módulo</th><th>T1</th><th>T2</th><th>T3</th><th>REC</th><th className="px-4 py-3">Media Final</th></tr></thead>
                                 <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
                                     {COURSE_MODULES.map(mod => {
-                                        const isSostenibilidad = mod.name === 'Sostenibilidad aplicada al sistema productivo';
                                         const isConvalidated = allCourseGrades[student.id]?.[mod.name]?.isConvalidated;
                                         
                                         let gradesObj: { t1: number | null, t2: number | null, t3: number | null, final: number | null };
@@ -567,12 +582,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                             <tr key={mod.name}>
                                                 <td className="px-4 py-2 text-left font-medium">{mod.name}</td>
                                                 {isConvalidated ? (
-                                                    <>
-                                                        <td colSpan={5} className="text-center font-bold text-green-600 bg-green-50">CONVALIDADA</td>
-                                                        <td className="px-4 py-2 text-center">
-                                                            <button onClick={() => handleToggleConvalidation(mod.name)} className="text-xs text-gray-500 hover:text-red-600">Anular</button>
-                                                        </td>
-                                                    </>
+                                                    <td colSpan={5} className="text-center font-bold text-green-600 bg-green-50">CONVALIDADA</td>
                                                 ) : (
                                                     <>
                                                         <td className={calculated ? "bg-gray-50 font-medium" : ""}>{gradesObj.t1 !== null ? gradesObj.t1.toFixed(2) : '-'}</td>
@@ -580,11 +590,6 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                         <td className={calculated ? "bg-gray-50 font-medium" : ""}>{mod.trimesters === 3 ? (gradesObj.t3 !== null ? gradesObj.t3.toFixed(2) : '-') : <span className="text-gray-400">N/A</span>}</td>
                                                         <td>{recVal ?? '-'}</td>
                                                         <td className={`font-bold ${gradesObj.final !== null && gradesObj.final < 5 ? 'text-red-600' : ''}`}>{gradesObj.final?.toFixed(2) ?? '-'}</td>
-                                                        <td className="px-4 py-2 text-center">
-                                                          {!isSostenibilidad && (
-                                                            <button onClick={() => handleToggleConvalidation(mod.name)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">Convalidar</button>
-                                                          )}
-                                                        </td>
                                                     </>
                                                 )}
                                             </tr>
