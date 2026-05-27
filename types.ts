@@ -183,7 +183,9 @@ export interface ActivityGrade {
     normal: number | null;
     rec1: number | null;
     rec2: number | null; // June
-    isLocked: boolean;
+    isLockedNormal: boolean;
+    isLockedRec1: boolean;
+    isLockedRec2: boolean;
 }
 
 export interface InstrumentGrades {

@@ -126,10 +126,20 @@ const GradesMatrix: React.FC<{
             const activityGrade = studentGrades[activityId];
             
             let newActivityGrade: ActivityGrade;
-            if (typeof activityGrade === 'object' && activityGrade !== null) {
-                newActivityGrade = { ...activityGrade, [field]: field === 'isLocked' ? (value === 'true') : numericValue };
+            // Helper to determine if isLocked field is being toggled
+            const isLockedField = field.startsWith('isLocked');
+            
+            if (typeof activityGrade === 'object' && activityGrade !== null && 'normal' in activityGrade) {
+                newActivityGrade = { ...activityGrade, [field]: isLockedField ? (value === 'true') : numericValue };
             } else {
-                newActivityGrade = { normal: field === 'normal' ? numericValue : (activityGrade as number | null), rec1: field === 'rec1' ? numericValue : null, rec2: field === 'rec2' ? numericValue : null, isLocked: field === 'isLocked' ? (value === 'true') : false };
+                newActivityGrade = { 
+                    normal: field === 'normal' ? numericValue : (typeof activityGrade === 'number' ? activityGrade : null), 
+                    rec1: field === 'rec1' ? numericValue : null, 
+                    rec2: field === 'rec2' ? numericValue : null, 
+                    isLockedNormal: field === 'isLockedNormal' ? (value === 'true') : false,
+                    isLockedRec1: field === 'isLockedRec1' ? (value === 'true') : false,
+                    isLockedRec2: field === 'isLockedRec2' ? (value === 'true') : false
+                };
             }
 
             return {
@@ -139,6 +149,39 @@ const GradesMatrix: React.FC<{
                     [activityId]: newActivityGrade
                 }
             };
+        });
+    };
+
+    const toggleColumnLock = (activityId: string, field: 'isLockedNormal' | 'isLockedRec1' | 'isLockedRec2') => {
+        setInstrumentGrades(prev => {
+            const newGrades = { ...prev };
+            // Find current lock state of first student
+            const firstStudentId = sortedStudents[0]?.id;
+            if (!firstStudentId) return prev;
+            
+            const isCurrentlyLocked = (newGrades[firstStudentId]?.[activityId] as ActivityGrade)?.[field] ?? false;
+            
+            sortedStudents.forEach(student => {
+                const studentGrades = newGrades[student.id] || {};
+                const currentGrade = studentGrades[activityId];
+                
+                let activityGrade: ActivityGrade;
+                if (typeof currentGrade === 'object' && currentGrade !== null && 'normal' in currentGrade) {
+                    activityGrade = { ...currentGrade, [field]: !isCurrentlyLocked };
+                } else {
+                    activityGrade = { 
+                        normal: typeof currentGrade === 'number' ? currentGrade : null, 
+                        rec1: null, 
+                        rec2: null, 
+                        isLockedNormal: field === 'isLockedNormal' ? !isCurrentlyLocked : false,
+                        isLockedRec1: field === 'isLockedRec1' ? !isCurrentlyLocked : false,
+                        isLockedRec2: field === 'isLockedRec2' ? !isCurrentlyLocked : false
+                    };
+                }
+                newGrades[student.id] = { ...studentGrades, [activityId]: activityGrade };
+            });
+            
+            return newGrades;
         });
     };
 
@@ -160,9 +203,18 @@ const GradesMatrix: React.FC<{
                         <th className="p-2 border font-semibold text-gray-600 w-48 text-left sticky left-0 bg-gray-200"></th>
                         {instrument.activities.map(act => (
                             <React.Fragment key={act.id}>
-                                <th className="p-1 border text-center">Nota</th>
-                                <th className="p-1 border text-center">Rec 1</th>
-                                <th className="p-1 border text-center">Rec 2</th>
+                                <th className="p-1 border text-center">
+                                     <button onClick={() => toggleColumnLock(act.id, 'isLockedNormal')} className="block mx-auto">🔒</button>
+                                     Nota
+                                </th>
+                                <th className="p-1 border text-center">
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec1')} className="block mx-auto">🔒</button>
+                                     Rec 1
+                                </th>
+                                <th className="p-1 border text-center">
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec2')} className="block mx-auto">🔒</button>
+                                     Rec 2
+                                </th>
                                 <th className="p-1 border text-center">Final</th>
                             </React.Fragment>
                         ))}
@@ -174,25 +226,26 @@ const GradesMatrix: React.FC<{
                             <td className={`p-2 border text-left font-medium text-gray-800 w-48 sticky left-0 group-hover:bg-gray-100 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                             {instrument.activities.map(act => {
                                 const grades = instrumentGrades[student.id]?.[act.id];
-                                const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null ? grades : { normal: grades as number | null, rec1: null, rec2: null, isLocked: false };
+                                const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
                                 
                                 const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
 
                                 return (
                                     <React.Fragment key={act.id}>
-                                        <td className="p-1 border text-center relative">
+                                        <td className="p-1 border text-center">
                                             <input type="number" 
                                                    value={activityGrade.normal ?? ''} 
                                                    onChange={e => handleGradeChange(student.id, act.id, 'normal', e.target.value)} 
                                                    className="w-12 p-1 border rounded text-center"
-                                                   disabled={activityGrade.isLocked}
+                                                   disabled={activityGrade.isLockedNormal}
                                             />
-                                            <button onClick={() => handleGradeChange(student.id, act.id, 'isLocked', (!activityGrade.isLocked).toString())} className="absolute right-0 top-1 p-0.5">
-                                                {activityGrade.isLocked ? '🔒' : '🔓'}
-                                            </button>
                                         </td>
-                                        <td className="p-1 border"><input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLocked}/></td>
-                                        <td className="p-1 border"><input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLocked}/></td>
+                                        <td className="p-1 border text-center">
+                                            <input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec1}/>
+                                        </td>
+                                        <td className="p-1 border text-center">
+                                            <input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec2}/>
+                                        </td>
                                         <td className="p-2 border text-center font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
                                     </React.Fragment>
                                 );
