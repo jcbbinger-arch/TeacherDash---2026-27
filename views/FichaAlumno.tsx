@@ -561,7 +561,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                         const t1Avg = examsByTrimester.t1.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t1.length || 1);
                                         const t2Avg = examsByTrimester.t2.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t2.length || 1);
                                         const t3Avg = examsByTrimester.t3.reduce((sum, a) => sum + (instrumentGrades[student.id]?.[a.id]?.normal || 0), 0) / (examsByTrimester.t3.length || 1);
-                                        const periodsWithGrades = [examsByTrimester.t1.length > 0 ? t1Avg : null, examsByTrimester.t2.length > 0 ? t2Avg : null, examsByTrimester.t3.length > 0 ? t3Avg : null].filter(g => g !== null && g !== 0);
+                                        const periodsWithGrades = [examsByTrimester.t1.length > 0 ? t1Avg : null, examsByTrimester.t2.length > 0 ? t2Avg : null, examsByTrimester.t3.length > 0 ? t3Avg : null].filter(g => g !== null);
                                         const finalGrade = periodsWithGrades.length > 0 ? periodsWithGrades.reduce((a, b) => a + b, 0) / periodsWithGrades.length : null;
                                         return (
                                             <tr className="bg-gray-100 font-bold border-t">
@@ -623,7 +623,11 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                     })()}
                                                     {/* Ex. Práctico Section */}
                                                     {(() => {
-                                                        const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre.includes('Práctico') || inst.nombre.includes('Práctica'));
+                                                        const pracInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
+                                                            inst.nombre.toLowerCase().includes('prác') || 
+                                                            inst.nombre.toLowerCase().includes('práctico') ||
+                                                            inst.key.toLowerCase().includes('practico')
+                                                        );
                                                         const examenesInPeriod = pracInstrument ? pracInstrument.activities.filter(a => a.trimester === pKey) : [];
                                                         if (examenesInPeriod.length === 0) return null;
                                                         
