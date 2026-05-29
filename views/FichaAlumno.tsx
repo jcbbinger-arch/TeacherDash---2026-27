@@ -167,6 +167,14 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
       return null;
   }, [instrumentGrades]);
 
+  const getExamFinalGrade = useCallback((studentId: string, activityId: string) => {
+      const normal = getGradeNormal(studentId, activityId);
+      const rec1 = getGradeRec1(studentId, activityId);
+      const rec2 = getGradeRec2(studentId, activityId);
+      if (normal === null && rec1 === null && rec2 === null) return null;
+      return Math.max(normal ?? 0, rec1 ?? 0, rec2 ?? 0);
+  }, [getGradeNormal, getGradeRec1, getGradeRec2]);
+
   const examsByTrimester = useMemo(() => {
     const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
         inst.nombre?.toLowerCase() === 'examen' || inst.id?.toLowerCase() === 'examen'
@@ -185,7 +193,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
       const key = `exam-${trimester}`;
       const isExpanded = expandedAcademicRows.has(key);
       
-      const gradedActivities = activities.map(a => getGradeNormal(student.id, a.id)).filter(g => g !== null && g !== undefined) as number[];
+      const gradedActivities = activities.map(a => getExamFinalGrade(student.id, a.id)).filter(g => g !== null) as number[];
       const avgGrade = gradedActivities.length > 0 ? gradedActivities.reduce((sum, g) => sum + g, 0) / gradedActivities.length : null;
       
       return (
@@ -654,13 +662,13 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                      {renderExamsForTrimester('t2', '2º Trimestre')}
                                      {renderExamsForTrimester('t3', '3º Trimestre')}
                                      {(() => {
-                                        const t1Grades = examsByTrimester.t1.map(a => getGradeNormal(student.id, a.id)).filter(g => g !== null) as number[];
+                                        const t1Grades = examsByTrimester.t1.map(a => getExamFinalGrade(student.id, a.id)).filter(g => g !== null) as number[];
                                         const t1Avg = t1Grades.length > 0 ? t1Grades.reduce((sum, val) => sum + val, 0) / t1Grades.length : null;
 
-                                        const t2Grades = examsByTrimester.t2.map(a => getGradeNormal(student.id, a.id)).filter(g => g !== null) as number[];
+                                        const t2Grades = examsByTrimester.t2.map(a => getExamFinalGrade(student.id, a.id)).filter(g => g !== null) as number[];
                                         const t2Avg = t2Grades.length > 0 ? t2Grades.reduce((sum, val) => sum + val, 0) / t2Grades.length : null;
 
-                                        const t3Grades = examsByTrimester.t3.map(a => getGradeNormal(student.id, a.id)).filter(g => g !== null) as number[];
+                                        const t3Grades = examsByTrimester.t3.map(a => getExamFinalGrade(student.id, a.id)).filter(g => g !== null) as number[];
                                         const t3Avg = t3Grades.length > 0 ? t3Grades.reduce((sum, val) => sum + val, 0) / t3Grades.length : null;
 
                                         const periodsWithGrades = [t1Avg, t2Avg, t3Avg].filter(g => g !== null) as number[];
