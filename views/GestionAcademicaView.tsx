@@ -396,7 +396,7 @@ const GestionAcademicaView: React.FC = () => {
                                 <tr><td colSpan={100} className="bg-gray-200 font-bold p-1 text-left pl-4">{groupName}</td></tr>
                                 {studentsInGroup.map((student, index) => (
                                     <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
-                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => {
                                             const studentAverage = finalGradesAndAverages.studentGrades[student.id].averages[period.key];
                                             return [
@@ -420,7 +420,7 @@ const GestionAcademicaView: React.FC = () => {
                                                         }
                                                     }
                                                     return (
-                                                    <td key={`${period.key}-${instrument.key}`} className={`border ${instrument.type === 'calculated' ? 'bg-blue-50' : ''}`}>
+                                                    <td key={`${period.key}-${instrument.key}`} className={`border ${instrument.type === 'calculated' ? 'bg-sky-50' : ''}`}>
                                                     {instrument.type === 'manual' ? (
                                                         instrument.key === 'examen1' || instrument.key === 'examen2' ? (
                                                             <span className="p-1.5 block font-medium">
@@ -444,7 +444,7 @@ const GestionAcademicaView: React.FC = () => {
                                                     ) : (<span className="p-1.5 block">{calculatedGrade !== null ? calculatedGrade.toFixed(2) : '-'}</span>)}
                                                     </td>
                                                 )}),
-                                                <td key={`${period.key}-avg`} className={`p-1.5 border font-bold ${studentAverage !== null && studentAverage < 5 ? 'text-red-600' : 'text-black'} bg-gray-200`}>{studentAverage?.toFixed(2) ?? '-'}</td>
+                                                <td key={`${period.key}-avg`} className={`p-1.5 border font-bold ${studentAverage !== null && studentAverage < 5 ? 'text-red-600' : 'text-black'} bg-stone-100`}>{studentAverage?.toFixed(2) ?? '-'}</td>
                                             ]
                                         })}
                                     </tr>
@@ -481,7 +481,7 @@ const GestionAcademicaView: React.FC = () => {
                     <tbody>
                          {students.map((student, index) => (
                             <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
-                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-orange-100 ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                 {COURSE_MODULES.map(module => {
                                     const studentCourseGrades = localCourseGrades[student.id] || {};
                                     const isConvalidated = studentCourseGrades[module.name]?.isConvalidated;
@@ -517,20 +517,20 @@ const GestionAcademicaView: React.FC = () => {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td className={`border ${calculated ? 'bg-gray-100' : ''}`}>
+                                                    <td className={`${calculated ? 'bg-gray-50' : ''}`}>
                                                         {calculated ? 
                                                             <span className="p-1.5 block text-center font-medium text-gray-700">{gradesObj.t1?.toFixed(2) ?? '-'}</span> :
                                                             <input type="number" step="0.1" min="0" max="10" value={gradesObj.t1 ?? ''} onChange={e => handleCourseGradeChange(student.id, module.name, 't1', e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none" />
                                                         }
                                                     </td>
-                                                    <td className={`border ${calculated ? 'bg-gray-100' : ''}`}>
+                                                    <td className={`${calculated ? 'bg-gray-50' : ''}`}>
                                                         {calculated ?
                                                             <span className="p-1.5 block text-center font-medium text-gray-700">{gradesObj.t2?.toFixed(2) ?? '-'}</span> :
                                                             <input type="number" step="0.1" min="0" max="10" value={gradesObj.t2 ?? ''} onChange={e => handleCourseGradeChange(student.id, module.name, 't2', e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none" />
                                                         }
                                                     </td>
                                                     {module.trimesters === 3 && (
-                                                        <td className={`border ${calculated ? 'bg-gray-100' : ''}`}>
+                                                        <td className={`${calculated ? 'bg-gray-50' : ''}`}>
                                                             {calculated ?
                                                                 <span className="p-1.5 block text-center font-medium text-gray-700">{gradesObj.t3?.toFixed(2) ?? '-'}</span> :
                                                                 <input type="number" step="0.1" min="0" max="10" value={gradesObj.t3 ?? ''} onChange={e => handleCourseGradeChange(student.id, module.name, 't3', e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none" />
@@ -538,7 +538,7 @@ const GestionAcademicaView: React.FC = () => {
                                                         </td>
                                                     )}
                                                     <td className="border"><input type="number" step="0.1" min="0" max="10" value={recVal ?? ''} onChange={e => handleCourseGradeChange(student.id, module.name, 'rec', e.target.value)} className="w-16 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none" /></td>
-                                                    <td className={`p-1.5 border font-bold ${gradesObj.final !== null && gradesObj.final < 5 ? 'text-red-600' : 'text-black'} bg-gray-200`}>{gradesObj.final?.toFixed(2) ?? '-'}</td>
+                                                    <td className={`p-1.5 border font-bold ${gradesObj.final !== null && gradesObj.final < 5 ? 'text-red-600' : 'text-black'} bg-stone-100`}>{gradesObj.final?.toFixed(2) ?? '-'}</td>
                                                     <td className="border text-center">
                                                         <button onClick={() => handleToggleConvalidation(student.id, module.name)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">Convalidar</button>
                                                     </td>
