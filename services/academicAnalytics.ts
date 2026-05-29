@@ -7,6 +7,20 @@ import {
     InstrumentGrades
 } from '../types';
 
+const getNumericValue = (g: any): number | null => {
+    if (g === null || g === undefined) return null;
+    if (typeof g === 'number') return g;
+    if (typeof g === 'object') {
+        const normal = g.normal !== null && g.normal !== undefined ? parseFloat(String(g.normal)) : null;
+        const rec1 = g.rec1 !== null && g.rec1 !== undefined ? parseFloat(String(g.rec1)) : null;
+        const rec2 = g.rec2 !== null && g.rec2 !== undefined ? parseFloat(String(g.rec2)) : null;
+        const validGrades = [normal, rec1, rec2].filter((v): v is number => v !== null && !isNaN(v));
+        return validGrades.length > 0 ? Math.max(...validGrades) : null;
+    }
+    const parsed = parseFloat(String(g));
+    return isNaN(parsed) ? null : parsed;
+};
+
 /**
  * Gets the grade for a student for a specific evaluation activity.
  * This function maps activity IDs to their corresponding grades in the data structure.
@@ -21,7 +35,8 @@ const getGradeForActivity = (
 ): number | null => {
 
     if (module === 'optativa' || module === 'proyecto') {
-        return instrumentGrades[studentId]?.[activityId] ?? null;
+        const rawGrade = instrumentGrades[studentId]?.[activityId];
+        return getNumericValue(rawGrade);
     }
 
     // --- PC Module Logic ---

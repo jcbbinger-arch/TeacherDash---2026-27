@@ -2,6 +2,20 @@
 import { StudentAcademicGrades, StudentCalculatedGrades, InstrumentGrades, InstrumentoEvaluacion } from '../types';
 import { ACADEMIC_EVALUATION_STRUCTURE } from '../data/constants';
 
+const getNumericValue = (g: any): number | null => {
+    if (g === null || g === undefined) return null;
+    if (typeof g === 'number') return g;
+    if (typeof g === 'object') {
+        const normal = g.normal !== null && g.normal !== undefined ? parseFloat(String(g.normal)) : null;
+        const rec1 = g.rec1 !== null && g.rec1 !== undefined ? parseFloat(String(g.rec1)) : null;
+        const rec2 = g.rec2 !== null && g.rec2 !== undefined ? parseFloat(String(g.rec2)) : null;
+        const validGrades = [normal, rec1, rec2].filter((v): v is number => v !== null && !isNaN(v));
+        return validGrades.length > 0 ? Math.max(...validGrades) : null;
+    }
+    const parsed = parseFloat(String(g));
+    return isNaN(parsed) ? null : parsed;
+};
+
 export const calculateStudentPeriodAverages = (
     academicGrades: StudentAcademicGrades | undefined,
     calculatedGrades: StudentCalculatedGrades | undefined,
@@ -36,16 +50,7 @@ export const calculateStudentPeriodAverages = (
                         const activity = activitiesInPeriod[activityIndex];
                         if (activity) {
                             const g = instrumentGrades[studentId]?.[activity.id];
-                            if (g !== null && g !== undefined) {
-                                if (typeof g === 'object' && 'normal' in g) {
-                                    const normal = g.normal;
-                                    const rec1 = g.rec1 ?? null;
-                                    const rec2 = g.rec2 ?? null;
-                                    grade = Math.max(normal ?? 0, rec1 ?? 0, rec2 ?? 0);
-                                } else if (typeof g === 'number') {
-                                    grade = g;
-                                }
-                            }
+                            grade = getNumericValue(g);
                         }
                     }
                 }
@@ -98,8 +103,10 @@ export const calculateModularGrades = (
     const studentGrades = instrumentGrades[studentId] || {};
 
     Object.values(instrumentosEvaluacion).forEach(instrument => {
-        instrument.activities.forEach(activity => {
-            const grade = studentGrades[activity.id];
+        const activities = instrument.activities || [];
+        activities.forEach(activity => {
+            const rawGrade = studentGrades[activity.id];
+            const grade = getNumericValue(rawGrade);
             if (grade !== null && grade !== undefined && !isNaN(grade)) {
                 if (activity.trimester === 't1') grades.t1.push(grade);
                 else if (activity.trimester === 't2') grades.t2.push(grade);
