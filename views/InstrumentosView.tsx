@@ -173,17 +173,54 @@ const GradesMatrix: React.FC<{
                     activityGrade = { ...currentGrade, [field]: !isCurrentlyLocked };
                 } else {
                     activityGrade = { 
-                        normal: typeof currentGrade === 'number' ? currentGrade : null, 
-                        rec1: null, 
-                        rec2: null, 
-                        isLockedNormal: field === 'isLockedNormal' ? !isCurrentlyLocked : false,
-                        isLockedRec1: field === 'isLockedRec1' ? !isCurrentlyLocked : false,
-                        isLockedRec2: field === 'isLockedRec2' ? !isCurrentlyLocked : false
+                        normal: (typeof currentGrade === 'number' || (typeof currentGrade === 'object' && currentGrade !== null && 'normal' in currentGrade)) ? (typeof currentGrade === 'number' ? currentGrade : (currentGrade as ActivityGrade).normal) : null, 
+                        rec1: (typeof currentGrade === 'object' && currentGrade !== null && 'rec1' in currentGrade) ? (currentGrade as ActivityGrade).rec1 : null, 
+                        rec2: (typeof currentGrade === 'object' && currentGrade !== null && 'rec2' in currentGrade) ? (currentGrade as ActivityGrade).rec2 : null, 
+                        isLockedNormal: field === 'isLockedNormal' ? !isCurrentlyLocked : (typeof currentGrade === 'object' && currentGrade !== null && 'isLockedNormal' in currentGrade ? (currentGrade as ActivityGrade).isLockedNormal : false),
+                        isLockedRec1: field === 'isLockedRec1' ? !isCurrentlyLocked : (typeof currentGrade === 'object' && currentGrade !== null && 'isLockedRec1' in currentGrade ? (currentGrade as ActivityGrade).isLockedRec1 : false),
+                        isLockedRec2: field === 'isLockedRec2' ? !isCurrentlyLocked : (typeof currentGrade === 'object' && currentGrade !== null && 'isLockedRec2' in currentGrade ? (currentGrade as ActivityGrade).isLockedRec2 : false)
                     };
                 }
                 newGrades[student.id] = { ...studentGrades, [activityId]: activityGrade };
             });
             
+            return newGrades;
+        });
+    };
+
+    const handlePasteColumn = (e: React.ClipboardEvent, startIndex: number, activityId: string, field: 'normal' | 'rec1' | 'rec2') => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text');
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        
+        setInstrumentGrades(prev => {
+            const newGrades = JSON.parse(JSON.stringify(prev));
+            rows.forEach((rowValue, i) => {
+                const studentIndex = startIndex + i;
+                if (studentIndex < sortedStudents.length) {
+                    const student = sortedStudents[studentIndex];
+                    const numericValue = parseFloat(rowValue.trim());
+                    if (!isNaN(numericValue) && numericValue >= 0 && numericValue <= 10) {
+                        const studentGrades = newGrades[student.id] || {};
+                        const currentGrade = studentGrades[activityId];
+                        
+                        let activityGrade: ActivityGrade;
+                        if (typeof currentGrade === 'object' && currentGrade !== null && 'normal' in currentGrade) {
+                            activityGrade = { ...currentGrade, [field]: numericValue };
+                        } else {
+                            activityGrade = { 
+                                normal: field === 'normal' ? numericValue : (typeof currentGrade === 'number' ? currentGrade : null), 
+                                rec1: field === 'rec1' ? numericValue : null, 
+                                rec2: field === 'rec2' ? numericValue : null, 
+                                isLockedNormal: false,
+                                isLockedRec1: false,
+                                isLockedRec2: false
+                            };
+                        }
+                        newGrades[student.id] = { ...studentGrades, [activityId]: activityGrade };
+                    }
+                }
+            });
             return newGrades;
         });
     };
@@ -273,15 +310,16 @@ const GradesMatrix: React.FC<{
                                             <input type="number" 
                                                    value={activityGrade.normal ?? ''} 
                                                    onChange={e => handleGradeChange(student.id, act.id, 'normal', e.target.value)} 
+                                                   onPaste={e => handlePasteColumn(e, index, act.id, 'normal')}
                                                    className="w-12 p-1 border rounded text-center"
                                                    disabled={activityGrade.isLockedNormal}
                                             />
                                         </td>
                                         <td className="p-1 border text-center">
-                                            <input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec1}/>
+                                            <input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec1')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec1}/>
                                         </td>
                                         <td className="p-1 border text-center">
-                                            <input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec2}/>
+                                            <input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec2')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec2}/>
                                         </td>
                                         <td className="p-2 border text-center font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
                                     </React.Fragment>

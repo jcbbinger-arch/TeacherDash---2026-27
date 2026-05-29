@@ -71,14 +71,16 @@ const EvaluacionInstrumentosTab: React.FC = () => {
     };
 
     const handlePasteColumn = (e: React.ClipboardEvent, startIndex: number, activityId: string) => {
-        if (!unlockedActivityIds.has(activityId)) {
-            addToast('Columna bloqueada. Ábrela (candado verde) para poder pegar datos.', 'error');
-            return;
-        }                
         e.preventDefault();
         const text = e.clipboardData.getData('text');
-        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
         
+        // Check if unlocked (only if pasting more than one row)
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        if (rows.length > 1 && !unlockedActivityIds.has(activityId)) {
+            addToast('Columna bloqueada. Ábrela (candado verde) para poder pegar datos.', 'error');
+            return;
+        }
+
         setLocalGrades(prev => {
             const newGrades = JSON.parse(JSON.stringify(prev));
             rows.forEach((rowValue, i) => {
@@ -185,10 +187,7 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                                                 value={localGrades[student.id]?.[act.id] ?? ''}
                                                 onChange={e => handleGradeChange(student.id, act.id, e.target.value)}
                                                 onPaste={e => {
-                                                    const text = e.clipboardData.getData('text');
-                                                    if (text.includes('\n') || text.includes('\r')) {
-                                                        handlePasteColumn(e, index, act.id);
-                                                    }
+                                                    handlePasteColumn(e, index, act.id);
                                                 }}
                                                 className="w-20 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none"
                                             />
