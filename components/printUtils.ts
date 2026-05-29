@@ -1,6 +1,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { TeacherData, InstituteData } from '../types';
 
 // Function to safely add an image and handle potential errors
@@ -110,4 +111,16 @@ export const downloadPdfWithTables = (
 
 
   doc.save(`${title.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+export const downloadExcel = (title: string, headers: string[][], bodies: any[][][]) => {
+  const wb = XLSX.utils.book_new();
+
+  headers.forEach((header, index) => {
+    const body = bodies[index];
+    const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
+    XLSX.utils.book_append_sheet(wb, ws, `Hoja ${index + 1}`);
+  });
+
+  XLSX.writeFile(wb, `${title.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
 };

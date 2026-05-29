@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Student, CourseModuleGrades, GradeValue, StudentCalculatedGrades, InstrumentoEvaluacion } from '../types';
 import { ACADEMIC_EVALUATION_STRUCTURE, COURSE_MODULES } from '../data/constants';
 import { ClipboardListIcon, SaveIcon, ExportIcon, PencilIcon, LockClosedIcon, LockOpenIcon } from '../components/icons';
-import { downloadPdfWithTables } from '../components/printUtils';
+import { downloadPdfWithTables, downloadExcel } from '../components/printUtils';
+import { ExportButtons } from '../components/ExportButtons';
 import { useAppContext } from '../context/AppContext';
 import { calculateStudentPeriodAverages, calculateModularGrades } from '../services/gradeCalculator';
 
@@ -13,8 +14,23 @@ const EvaluacionInstrumentosTab: React.FC = () => {
         instrumentGrades, setInstrumentGrades,
         optativaInstrumentosEvaluacion,
         proyectoInstrumentosEvaluacion,
+        teacherData, instituteData,
         addToast
     } = useAppContext();
+
+    const handleExport = (format: 'pdf' | 'excel') => {
+        const headers = [['Alumno', ...activities.map(act => act.name)]];
+        const bodies = [sortedStudents.map(student => [
+            `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
+            ...activities.map(act => localGrades[student.id]?.[act.id] ?? '-')
+        ])];
+        
+        if (format === 'pdf') {
+            downloadPdfWithTables('Evaluación por Instrumentos', headers, bodies, teacherData, instituteData);
+        } else {
+            downloadExcel('Evaluación por Instrumentos', headers, bodies);
+        }
+    };
 
     const [selectedModule, setSelectedModule] = useState<'optativa' | 'proyecto'>('optativa');
     const [localGrades, setLocalGrades] = useState(instrumentGrades);
@@ -126,9 +142,12 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                         <option value="proyecto">Proyecto</option>
                     </select>
                  </div>
-                 <button onClick={handleSaveChanges} disabled={!isDirty} className={`flex items-center px-4 py-2 rounded-lg font-semibold transition ${!isDirty ? 'bg-green-200 text-green-500 cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}>
-                    <SaveIcon className="w-5 h-5 mr-1" /> Guardar Cambios
-                </button>
+                 <div className="flex gap-2">
+                    <ExportButtons onExportPdf={() => handleExport('pdf')} onExportExcel={() => handleExport('excel')} />
+                    <button onClick={handleSaveChanges} disabled={!isDirty} className={`flex items-center px-4 py-2 rounded-lg font-semibold transition ${!isDirty ? 'bg-green-200 text-green-500 cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}>
+                        <SaveIcon className="w-5 h-5 mr-1" /> Guardar Cambios
+                    </button>
+                 </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -204,6 +223,10 @@ const GestionAcademicaView: React.FC = () => {
         pcInstrumentosEvaluacion,
         teacherData, instituteData, addToast 
     } = useAppContext();
+
+    const handleExport = (format: 'pdf' | 'excel') => {
+        addToast('La exportación aún necesita ser configurada para esta vista.', 'warning');
+    };
     
     const [activeTab, setActiveTab] = useState<'principal' | 'otros' | 'instrumentos'>('principal');
     const [localAcademicGrades, setLocalAcademicGrades] = useState(academicGrades);
