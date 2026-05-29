@@ -291,11 +291,14 @@ const GestionAppView: React.FC = () => {
 
         if (window.confirm(`¡Atención! Esto sobrescribirá los ${restoreKeys.size} módulos de datos seleccionados. Los datos no seleccionados no se verán afectados. ¿Deseas continuar?`)) {
             try {
-                restoreKeys.forEach(key => {
-                    if (backupData.hasOwnProperty(key)) {
-                        localStorage.setItem(key, JSON.stringify(backupData[key]));
-                    }
+                const keysArray = Array.from(restoreKeys).filter(key => backupData.hasOwnProperty(key));
+                keysArray.forEach(key => {
+                    localStorage.setItem(key, JSON.stringify(backupData[key]));
                 });
+                
+                // Flag these keys as pending restore so Firestore sync force-uploads them on reload
+                localStorage.setItem('backup_restore_pending', JSON.stringify(keysArray));
+
                 addToast('Restauración selectiva completada. La aplicación se recargará.', 'success');
                 setTimeout(() => window.location.reload(), 2000);
             } catch (error) {

@@ -401,6 +401,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     }
                 });
 
+                // Check for locally restored keys from backup file that should override firebase remote state
+                let pendingRestoreKeys: string[] = [];
+                try {
+                    const pending = window.localStorage.getItem('backup_restore_pending');
+                    if (pending) {
+                        pendingRestoreKeys = JSON.parse(pending);
+                    }
+                } catch (err) {
+                    console.error("Error reading backup_restore_pending:", err);
+                }
+
                 const syncConfigs = [
                     { key: 'students', current: students, rawSetter: setStudentsRaw },
                     { key: 'practiceGroups', current: practiceGroups, rawSetter: setPracticeGroupsRaw },
@@ -433,8 +444,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const writePromises: Promise<void>[] = [];
 
                 for (const config of syncConfigs) {
+                    const isRestoredKey = pendingRestoreKeys.includes(config.key);
                     const remoteData = firestoreData[config.key];
-                    if (remoteData !== undefined) {
+
+                    if (isRestoredKey) {
+                        // Force upload the locally restored value from backup
+                        let localValue = config.current;
+                        try {
+                            const stored = window.localStorage.getItem(config.key);
+                            if (stored) {
+                                localValue = JSON.parse(stored);
+                            }
+                        } catch (e) {
+                            console.error(`Error reading local storage for force upload of ${config.key}:`, e);
+                        }
+
+                        console.info(`[Firebase Sync] Sobrescribiendo Firestore con copia de seguridad local restaurada para "${config.key}"...`);
+                        config.rawSetter(localValue);
+
+                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
+                        const writePromise = setDoc(docRef, {
+                            data: localValue,
+                            updatedAt: serverTimestamp()
+                        }).catch(err => {
+                            console.error(`[Firebase Sync] Error restaurando clave "${config.key}" en Firestore:`, err);
+                        });
+                        writePromises.push(writePromise);
+                    } else if (remoteData !== undefined) {
                         const len = Array.isArray(remoteData) ? `${remoteData.length} elementos` : (remoteData && typeof remoteData === 'object' ? `${Object.keys(remoteData).length} claves` : 'valor');
                         console.info(`[Firebase Sync] Restaurando desde Firestore la clave "${config.key}":`, len);
                         config.rawSetter(remoteData);
@@ -465,6 +501,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (writePromises.length > 0) {
                     console.info(`[Firebase Sync] Sincronizando ${writePromises.length} colecciones pendientes de forma simultánea...`);
                     await Promise.all(writePromises);
+                }
+
+                // Clean the pending restore keys once we have force pushed them
+                if (pendingRestoreKeys.length > 0) {
+                    try {
+                        window.localStorage.removeItem('backup_restore_pending');
+                    } catch (e) {
+                        console.error(e);
+                    }
                 }
 
                 console.info("[Firebase Sync] ¡Sincronización con base de datos completada satisfactoriamente!");
@@ -734,7 +779,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast(`Examen práctico guardado.`, 'success');
     };
     
-    const handleResetApp = () => {
+    const handleResetApp = async () => {
         const keysToRemove = [
             'students', 'practiceGroups', 'services', 'serviceEvaluations', 'serviceRoles', 'entryExitRecords', 
             'academicGrades', 'instrumentGrades', 'courseGrades', 'practicalExamEvaluations', 'teacher-app-data', 'institute-app-data', 
@@ -745,6 +790,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             'profesores'
         ];
         
+        if (user) {
+            try {
+                addToast('Eliminando datos remotos de la base de datos...', 'info');
+                const batchPromises = keysToRemove.map(key => {
+                    let emptyVal: any = [];
+                    if ([
+                        'academicGrades', 'instrumentGrades', 'courseGrades', 
+                        'pc-resultadosAprendizaje', 'pc-criteriosEvaluacion', 'pc-instrumentosEvaluacion', 'pc-unidadesTrabajo', 
+                        'optativa-resultadosAprendizaje', 'optativa-criteriosEvaluacion', 'optativa-instrumentosEvaluacion', 'optativa-unidadesTrabajo',
+                        'proyecto-resultadosAprendizaje', 'proyecto-criteriosEvaluacion', 'proyecto-instrumentosEvaluacion', 'proyecto-unidadesTrabajo'
+                    ].includes(key)) {
+                        emptyVal = {};
+                    } else if (key === 'teacher-app-data') {
+                        emptyVal = { name: 'Juan Codina Barranco', email: 'juan.codina@murciaeduca.es', logo: null };
+                    } else if (key === 'institute-app-data') {
+                        emptyVal = { name: 'CIFP Hostelería y Turismo de Cartagena', address: 'Calle Muralla del Mar, 3, 30202 Cartagena, Murcia', cif: 'Q1234567A', logo: null };
+                    } else if (key === 'trimester-dates') {
+                        emptyVal = { t1: { start: '', end: '' }, t2: { start: '', end: '' } };
+                    } else if (key === 'serviceRoles') {
+                        emptyVal = [
+                            { id: '1', name: 'Líder de Cocina', color: '#3b82f6', type: 'leader' },
+                            { id: '2', name: 'Líder de Sala', color: '#10b981', type: 'leader' },
+                            { id: '3', name: 'Ayudante de Cocina', color: '#f59e0b', type: 'secondary' },
+                            { id: '4', name: 'Ayudante de Sala', color: '#ef4444', type: 'secondary' }
+                        ];
+                    }
+                    return setDoc(doc(db, 'users', user.uid, 'data', key), {
+                        data: emptyVal,
+                        updatedAt: serverTimestamp()
+                    });
+                });
+                await Promise.all(batchPromises);
+            } catch (err) {
+                console.error("Error clearing remote data:", err);
+            }
+        }
+
         keysToRemove.forEach(key => {
             window.localStorage.removeItem(key);
         });
