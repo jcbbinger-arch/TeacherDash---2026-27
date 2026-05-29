@@ -296,6 +296,7 @@ interface AppContextType {
     
     calculatedStudentGrades: Record<string, StudentCalculatedGrades>;
     syncStatus: SyncStatus;
+    triggerManualSync: (isManual?: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -359,170 +360,181 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [profesores, setProfesores, setProfesoresRaw] = useSyncedState<Profesor[]>('profesores', mockProfesores, user, setSyncStatus);
     const [toasts, setToasts] = useState<Toast[]>([]);
+    const triggerManualSync = async (isManual = false) => {
+        if (!user) {
+            setSyncStatus('offline');
+            return;
+        }
+        
+        setSyncStatus('syncing');
+        console.info("[Firebase Sync] Iniciando sincronización de datos para el usuario:", { uid: user.uid, email: user.email });
+        
+        try {
+            if (isManual) {
+                addToast("Refrescando y sincronizando con la nube...", "info");
+            } else {
+                addToast("Sincronizando datos con la base de datos remota...", "info");
+            }
+            
+            await setDoc(doc(db, 'users', user.uid), {
+                uid: user.uid,
+                email: user.email || '',
+                updatedAt: serverTimestamp()
+            });
 
-    // Sync effect: executes whenever Google sign-in completes to either restore remote data or back up local offline progress
-    useEffect(() => {
-        const syncData = async () => {
-            if (!user) {
-                setSyncStatus('offline');
+            const dataPath = `users/${user.uid}/data`;
+            let querySnapshot;
+            try {
+                querySnapshot = await getDocs(collection(db, 'users', user.uid, 'data'));
+            } catch (err) {
+                console.error("[Firebase Sync] Error obteniendo colección de datos:", err);
+                setSyncStatus('error');
+                handleFirestoreError(err, OperationType.GET, dataPath);
                 return;
             }
-            
-            setSyncStatus('syncing');
-            console.info("[Firebase Sync] Iniciando sincronización de datos para el usuario:", { uid: user.uid, email: user.email });
-            
+
+            console.info("[Firebase Sync] Documentos remotos encontrados en Firestore:", querySnapshot.size);
+
+            const firestoreData: Record<string, any> = {};
+            querySnapshot.forEach(docSnap => {
+                const docData = docSnap.data();
+                if (docData && docData.data !== undefined) {
+                    firestoreData[docSnap.id] = docData.data;
+                }
+            });
+
+            // Check for locally restored keys from backup file that should override firebase remote state
+            let pendingRestoreKeys: string[] = [];
             try {
-                addToast("Sincronizando datos con la base de datos remota...", "info");
-                
-                await setDoc(doc(db, 'users', user.uid), {
-                    uid: user.uid,
-                    email: user.email || '',
-                    updatedAt: serverTimestamp()
-                });
-
-                const dataPath = `users/${user.uid}/data`;
-                let querySnapshot;
-                try {
-                    querySnapshot = await getDocs(collection(db, 'users', user.uid, 'data'));
-                } catch (err) {
-                    console.error("[Firebase Sync] Error obteniendo colección de datos:", err);
-                    setSyncStatus('error');
-                    handleFirestoreError(err, OperationType.GET, dataPath);
-                    return;
+                const pending = window.localStorage.getItem('backup_restore_pending');
+                if (pending) {
+                    pendingRestoreKeys = JSON.parse(pending);
                 }
-
-                console.info("[Firebase Sync] Documentos remotos encontrados en Firestore:", querySnapshot.size);
-
-                const firestoreData: Record<string, any> = {};
-                querySnapshot.forEach(docSnap => {
-                    const docData = docSnap.data();
-                    if (docData && docData.data !== undefined) {
-                        firestoreData[docSnap.id] = docData.data;
-                    }
-                });
-
-                // Check for locally restored keys from backup file that should override firebase remote state
-                let pendingRestoreKeys: string[] = [];
-                try {
-                    const pending = window.localStorage.getItem('backup_restore_pending');
-                    if (pending) {
-                        pendingRestoreKeys = JSON.parse(pending);
-                    }
-                } catch (err) {
-                    console.error("Error reading backup_restore_pending:", err);
-                }
-
-                const syncConfigs = [
-                    { key: 'students', current: students, rawSetter: setStudentsRaw },
-                    { key: 'practiceGroups', current: practiceGroups, rawSetter: setPracticeGroupsRaw },
-                    { key: 'services', current: services, rawSetter: setServicesRaw },
-                    { key: 'serviceEvaluations', current: serviceEvaluations, rawSetter: setServiceEvaluationsRaw },
-                    { key: 'serviceRoles', current: serviceRoles, rawSetter: setServiceRolesRaw },
-                    { key: 'entryExitRecords', current: entryExitRecords, rawSetter: setEntryExitRecordsRaw },
-                    { key: 'academicGrades', current: academicGrades, rawSetter: setAcademicGradesRaw },
-                    { key: 'instrumentGrades', current: instrumentGrades, rawSetter: setInstrumentGradesRaw },
-                    { key: 'courseGrades', current: courseGrades, rawSetter: setCourseGradesRaw },
-                    { key: 'practicalExamEvaluations', current: practicalExamEvaluations, rawSetter: setPracticalExamEvaluationsRaw },
-                    { key: 'teacher-app-data', current: teacherData, rawSetter: setTeacherDataRaw },
-                    { key: 'institute-app-data', current: instituteData, rawSetter: setInstituteDataRaw },
-                    { key: 'trimester-dates', current: trimesterDates, rawSetter: setTrimesterDatesRaw },
-                    { key: 'profesores', current: profesores, rawSetter: setProfesoresRaw },
-                    { key: 'pc-resultadosAprendizaje', current: pcResultadosAprendizaje, rawSetter: setPcResultadosAprendizajeRaw },
-                    { key: 'pc-criteriosEvaluacion', current: pcCriteriosEvaluacion, rawSetter: setPcCriteriosEvaluacionRaw },
-                    { key: 'pc-instrumentosEvaluacion', current: pcInstrumentosEvaluacion, rawSetter: setPcInstrumentosEvaluacionRaw },
-                    { key: 'pc-unidadesTrabajo', current: pcUnidadesTrabajo, rawSetter: setPcUnidadesTrabajoRaw },
-                    { key: 'optativa-resultadosAprendizaje', current: optativaResultadosAprendizaje, rawSetter: setOptativaResultadosAprendizajeRaw },
-                    { key: 'optativa-criteriosEvaluacion', current: optativaCriteriosEvaluacion, rawSetter: setOptativaCriteriosEvaluacionRaw },
-                    { key: 'optativa-instrumentosEvaluacion', current: optativaInstrumentosEvaluacion, rawSetter: setOptativaInstrumentosEvaluacionRaw },
-                    { key: 'optativa-unidadesTrabajo', current: optativaUnidadesTrabajo, rawSetter: setOptativaUnidadesTrabajoRaw },
-                    { key: 'proyecto-resultadosAprendizaje', current: proyectoResultadosAprendizaje, rawSetter: setProyectoResultadosAprendizajeRaw },
-                    { key: 'proyecto-criteriosEvaluacion', current: proyectoCriteriosEvaluacion, rawSetter: setProyectoCriteriosEvaluacionRaw },
-                    { key: 'proyecto-instrumentosEvaluacion', current: proyectoInstrumentosEvaluacion, rawSetter: setProyectoInstrumentosEvaluacionRaw },
-                    { key: 'proyecto-unidadesTrabajo', current: proyectoUnidadesTrabajo, rawSetter: setProyectoUnidadesTrabajoRaw },
-                ];
-
-                const writePromises: Promise<void>[] = [];
-
-                for (const config of syncConfigs) {
-                    const isRestoredKey = pendingRestoreKeys.includes(config.key);
-                    const remoteData = firestoreData[config.key];
-
-                    if (isRestoredKey) {
-                        // Force upload the locally restored value from backup
-                        let localValue = config.current;
-                        try {
-                            const stored = window.localStorage.getItem(config.key);
-                            if (stored) {
-                                localValue = JSON.parse(stored);
-                            }
-                        } catch (e) {
-                            console.error(`Error reading local storage for force upload of ${config.key}:`, e);
-                        }
-
-                        console.info(`[Firebase Sync] Sobrescribiendo Firestore con copia de seguridad local restaurada para "${config.key}"...`);
-                        config.rawSetter(localValue);
-
-                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
-                        const writePromise = setDoc(docRef, {
-                            data: localValue,
-                            updatedAt: serverTimestamp()
-                        }).catch(err => {
-                            console.error(`[Firebase Sync] Error restaurando clave "${config.key}" en Firestore:`, err);
-                        });
-                        writePromises.push(writePromise);
-                    } else if (remoteData !== undefined) {
-                        const len = Array.isArray(remoteData) ? `${remoteData.length} elementos` : (remoteData && typeof remoteData === 'object' ? `${Object.keys(remoteData).length} claves` : 'valor');
-                        console.info(`[Firebase Sync] Restaurando desde Firestore la clave "${config.key}":`, len);
-                        config.rawSetter(remoteData);
-                        try {
-                            window.localStorage.setItem(config.key, JSON.stringify(remoteData));
-                        } catch (e) {
-                            console.error(`[Firebase Sync] Error escribiendo localStorage para "${config.key}":`, e);
-                        }
-                    } else {
-                        const countLocal = Array.isArray(config.current) ? config.current.length : (config.current && typeof config.current === 'object' ? Object.keys(config.current).length : 0);
-                        if (countLocal > 0) {
-                            console.info(`[Firebase Sync] Subiendo datos locales a Firestore para la clave "${config.key}" (${countLocal} elementos/claves encontrados)...`);
-                        } else {
-                            console.info(`[Firebase Sync] Clave vacía "${config.key}" en local, inicializando en base de datos remota...`);
-                        }
-                        const docRef = doc(db, 'users', user.uid, 'data', config.key);
-                        const writePromise = setDoc(docRef, {
-                            data: config.current,
-                            updatedAt: serverTimestamp()
-                        }).catch(err => {
-                            console.error(`[Firebase Sync] Error al escribir clave "${config.key}" en Firestore:`, err);
-                            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/data/${config.key}`);
-                        });
-                        writePromises.push(writePromise);
-                    }
-                }
-
-                if (writePromises.length > 0) {
-                    console.info(`[Firebase Sync] Sincronizando ${writePromises.length} colecciones pendientes de forma simultánea...`);
-                    await Promise.all(writePromises);
-                }
-
-                // Clean the pending restore keys once we have force pushed them
-                if (pendingRestoreKeys.length > 0) {
-                    try {
-                        window.localStorage.removeItem('backup_restore_pending');
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-
-                console.info("[Firebase Sync] ¡Sincronización con base de datos completada satisfactoriamente!");
-                setSyncStatus('synced');
-                addToast("Sincronización finalizada correctamente", "success");
-            } catch (error) {
-                console.error("[Firebase Sync] Fallo definitivo de sincronización:", error);
-                setSyncStatus('error');
-                addToast("Fallo al actualizar la sincronización con base de datos", "error");
+            } catch (err) {
+                console.error("Error reading backup_restore_pending:", err);
             }
-        };
 
-        syncData();
+            const syncConfigs = [
+                { key: 'students', current: students, rawSetter: setStudentsRaw },
+                { key: 'practiceGroups', current: practiceGroups, rawSetter: setPracticeGroupsRaw },
+                { key: 'services', current: services, rawSetter: setServicesRaw },
+                { key: 'serviceEvaluations', current: serviceEvaluations, rawSetter: setServiceEvaluationsRaw },
+                { key: 'serviceRoles', current: serviceRoles, rawSetter: setServiceRolesRaw },
+                { key: 'entryExitRecords', current: entryExitRecords, rawSetter: setEntryExitRecordsRaw },
+                { key: 'academicGrades', current: academicGrades, rawSetter: setAcademicGradesRaw },
+                { key: 'instrumentGrades', current: instrumentGrades, rawSetter: setInstrumentGradesRaw },
+                { key: 'courseGrades', current: courseGrades, rawSetter: setCourseGradesRaw },
+                { key: 'practicalExamEvaluations', current: practicalExamEvaluations, rawSetter: setPracticalExamEvaluationsRaw },
+                { key: 'teacher-app-data', current: teacherData, rawSetter: setTeacherDataRaw },
+                { key: 'institute-app-data', current: instituteData, rawSetter: setInstituteDataRaw },
+                { key: 'trimester-dates', current: trimesterDates, rawSetter: setTrimesterDatesRaw },
+                { key: 'profesores', current: profesores, rawSetter: setProfesoresRaw },
+                { key: 'pc-resultadosAprendizaje', current: pcResultadosAprendizaje, rawSetter: setPcResultadosAprendizajeRaw },
+                { key: 'pc-criteriosEvaluacion', current: pcCriteriosEvaluacion, rawSetter: setPcCriteriosEvaluacionRaw },
+                { key: 'pc-instrumentosEvaluacion', current: pcInstrumentosEvaluacion, rawSetter: setPcInstrumentosEvaluacionRaw },
+                { key: 'pc-unidadesTrabajo', current: pcUnidadesTrabajo, rawSetter: setPcUnidadesTrabajoRaw },
+                { key: 'optativa-resultadosAprendizaje', current: optativaResultadosAprendizaje, rawSetter: setOptativaResultadosAprendizajeRaw },
+                { key: 'optativa-criteriosEvaluacion', current: optativaCriteriosEvaluacion, rawSetter: setOptativaCriteriosEvaluacionRaw },
+                { key: 'optativa-instrumentosEvaluacion', current: optativaInstrumentosEvaluacion, rawSetter: setOptativaInstrumentosEvaluacionRaw },
+                { key: 'optativa-unidadesTrabajo', current: optativaUnidadesTrabajo, rawSetter: setOptativaUnidadesTrabajoRaw },
+                { key: 'proyecto-resultadosAprendizaje', current: proyectoResultadosAprendizaje, rawSetter: setProyectoResultadosAprendizajeRaw },
+                { key: 'proyecto-criteriosEvaluacion', current: proyectoCriteriosEvaluacion, rawSetter: setProyectoCriteriosEvaluacionRaw },
+                { key: 'proyecto-instrumentosEvaluacion', current: proyectoInstrumentosEvaluacion, rawSetter: setProyectoInstrumentosEvaluacionRaw },
+                { key: 'proyecto-unidadesTrabajo', current: proyectoUnidadesTrabajo, rawSetter: setProyectoUnidadesTrabajoRaw },
+            ];
+
+            const writePromises: Promise<void>[] = [];
+
+            for (const config of syncConfigs) {
+                const isRestoredKey = pendingRestoreKeys.includes(config.key);
+                const remoteData = firestoreData[config.key];
+
+                if (isRestoredKey) {
+                    // Force upload the locally restored value from backup
+                    let localValue = config.current;
+                    try {
+                        const stored = window.localStorage.getItem(config.key);
+                        if (stored) {
+                            localValue = JSON.parse(stored);
+                        }
+                    } catch (e) {
+                        console.error(`Error reading local storage for force upload of ${config.key}:`, e);
+                    }
+
+                    console.info(`[Firebase Sync] Sobrescribiendo Firestore con copia de seguridad local restaurada para "${config.key}"...`);
+                    config.rawSetter(localValue);
+
+                    const docRef = doc(db, 'users', user.uid, 'data', config.key);
+                    const writePromise = setDoc(docRef, {
+                        data: localValue,
+                        updatedAt: serverTimestamp()
+                    }).catch(err => {
+                        console.error(`[Firebase Sync] Error restaurando clave "${config.key}" en Firestore:`, err);
+                    });
+                    writePromises.push(writePromise);
+                } else if (remoteData !== undefined) {
+                    const len = Array.isArray(remoteData) ? `${remoteData.length} elementos` : (remoteData && typeof remoteData === 'object' ? `${Object.keys(remoteData).length} claves` : 'valor');
+                    console.info(`[Firebase Sync] Restaurando desde Firestore la clave "${config.key}":`, len);
+                    config.rawSetter(remoteData);
+                    try {
+                        window.localStorage.setItem(config.key, JSON.stringify(remoteData));
+                    } catch (e) {
+                        console.error(`[Firebase Sync] Error escribiendo localStorage para "${config.key}":`, e);
+                    }
+                } else {
+                    const countLocal = Array.isArray(config.current) ? config.current.length : (config.current && typeof config.current === 'object' ? Object.keys(config.current).length : 0);
+                    if (countLocal > 0) {
+                        console.info(`[Firebase Sync] Subiendo datos locales a Firestore para la clave "${config.key}" (${countLocal} elementos/claves encontrados)...`);
+                    } else {
+                        console.info(`[Firebase Sync] Clave vacía "${config.key}" en local, inicializando en base de datos remota...`);
+                    }
+                    const docRef = doc(db, 'users', user.uid, 'data', config.key);
+                    const writePromise = setDoc(docRef, {
+                        data: config.current,
+                        updatedAt: serverTimestamp()
+                    }).catch(err => {
+                        console.error(`[Firebase Sync] Error al escribir clave "${config.key}" en Firestore:`, err);
+                        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/data/${config.key}`);
+                    });
+                    writePromises.push(writePromise);
+                }
+            }
+
+            if (writePromises.length > 0) {
+                console.info(`[Firebase Sync] Sincronizando ${writePromises.length} colecciones pendientes de forma simultánea...`);
+                await Promise.all(writePromises);
+            }
+
+            // Clean the pending restore keys once we have force pushed them
+            if (pendingRestoreKeys.length > 0) {
+                try {
+                    window.localStorage.removeItem('backup_restore_pending');
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            console.info("[Firebase Sync] ¡Sincronización con base de datos completada satisfactoriamente!");
+            setSyncStatus('synced');
+            if (isManual) {
+                addToast("Sincronización completada. Datos actualizados desde la nube.", "success");
+            } else {
+                addToast("Sincronización finalizada correctamente", "success");
+            }
+        } catch (error) {
+            console.error("[Firebase Sync] Fallo definitivo de sincronización:", error);
+            setSyncStatus('error');
+            addToast("Fallo al actualizar la sincronización con base de datos", "error");
+        }
+    };
+
+    // Auto-sync on Auth State Change
+    useEffect(() => {
+        if (user) {
+            triggerManualSync(false);
+        } else {
+            setSyncStatus('offline');
+        }
     }, [user]);
 
     const addToast = (message: string, type: ToastType = 'info') => {
@@ -863,7 +875,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signOut: logout,
 
         calculatedStudentGrades,
-        syncStatus
+        syncStatus,
+        triggerManualSync
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

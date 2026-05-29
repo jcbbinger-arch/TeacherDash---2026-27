@@ -3,7 +3,16 @@ import { ChefHatIcon } from './icons';
 import { useAppContext } from '../context/AppContext';
 
 const Header: React.FC = () => {
-  const { signOut, user, syncStatus } = useAppContext();
+  const { signOut, user, syncStatus, triggerManualSync } = useAppContext();
+  const [isIframe, setIsIframe] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      setIsIframe(window.self !== window.top);
+    } catch (e) {
+      setIsIframe(true);
+    }
+  }, []);
 
   const getSyncBadge = () => {
     switch (syncStatus) {
@@ -47,22 +56,72 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-md">
-      <div className="container mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center">
             <ChefHatIcon className="h-8 w-8 text-blue-500 mr-3" />
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
             Módulo: Productos Culinarios
             </h1>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center justify-center gap-3">
             {getSyncBadge()}
+            {user && (
+                <button
+                    onClick={() => triggerManualSync(true)}
+                    disabled={syncStatus === 'syncing'}
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                        syncStatus === 'syncing' 
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600'
+                            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60'
+                    }`}
+                    title="Forzar actualización y descarga de datos desde la nube"
+                >
+                    <svg className={`h-3.5 w-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.214 15M12 3v9l4 2" />
+                    </svg>
+                    <span>Resincronizar</span>
+                </button>
+            )}
+            {user && (
+                <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
+                    {user.photoURL ? (
+                        <img referrerPolicy="no-referrer" src={user.photoURL} alt="Perfil" className="w-5 h-5 rounded-full ring-1 ring-slate-200" />
+                    ) : (
+                        <div className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-bold">
+                            {user.email ? user.email[0].toUpperCase() : 'U'}
+                        </div>
+                    )}
+                    <div className="flex flex-col text-left">
+                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 leading-none truncate max-w-[120px]">
+                            {user.displayName || 'Profesor'}
+                        </span>
+                        <span className="text-[9px] text-gray-500 dark:text-gray-400 leading-none truncate max-w-[120px]" title={user.email || ''}>
+                            {user.email}
+                        </span>
+                    </div>
+                </div>
+            )}
             {user && (
                 <button 
                     onClick={signOut}
-                    className="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm"
+                    className="bg-gray-100 text-gray-700 hover:text-gray-900 dark:bg-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition text-xs font-medium"
                 >
                     Cerrar sesión
                 </button>
+            )}
+            {isIframe && (
+                <a
+                    href={window.location.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-1.5 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200 border border-amber-200 dark:border-amber-900 px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-amber-100 transition shadow-sm"
+                    title="Si tienes problemas de sincronización en Safari o Incógnito, abre la aplicación en pestaña nueva para evitar que el navegador restrinja la base de datos."
+                >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span>Nueva Pestaña 🌐</span>
+                </a>
             )}
         </div>
       </div>
