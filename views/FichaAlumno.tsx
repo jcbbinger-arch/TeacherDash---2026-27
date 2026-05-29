@@ -14,6 +14,8 @@ import {
     TrashIcon
 } from '../components/icons';
 import { useAppContext } from '../context/AppContext';
+import { ExportButtons } from '../components/ExportButtons';
+import * as XLSX from 'xlsx';
 import { generateStudentFilePDF } from '../services/reportGenerator';
 import { calculateRAGrade, calculateCriterioGrade } from '../services/academicAnalytics';
 import { calculateStudentPeriodAverages, calculateModularGrades } from '../services/gradeCalculator';
@@ -321,6 +323,20 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
       );
   };
   
+  const handleExport = (format: 'pdf' | 'excel') => {
+      if (format === 'pdf') handlePrint();
+      else {
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet([
+              ['Alumno', fullName],
+              ['Grupo', student.grupo],
+              ['Email', student.emailOficial]
+          ]);
+          XLSX.utils.book_append_sheet(wb, ws, "Datos");
+          XLSX.writeFile(wb, `${fullName.replace(/ /g, '_')}_Ficha.xlsx`);
+      }
+  };
+  
   const handleDeleteRecord = (id: string) => {
       if (window.confirm("¿Estás seguro de que quieres anular este registro de entrada/salida?")) {
           handleDeleteEntryExitRecord(id);
@@ -570,7 +586,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                 </>
             ) : (
                  <>
-                    <button onClick={handlePrint} className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700 transition"><PrinterIcon className="w-4 h-4 mr-2" />Imprimir Ficha</button>
+                     <ExportButtons onExportPdf={() => handleExport('pdf')} onExportExcel={() => handleExport('excel')} />
                     <button onClick={() => setIsEditing(true)} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"><PencilIcon className="w-4 h-4 mr-2" />Editar Ficha</button>
                  </>
             )}

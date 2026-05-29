@@ -1,7 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { PencilIcon, SaveIcon, PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon, LockClosedIcon, LockOpenIcon, ExportIcon } from '../components/icons';
+import { downloadPdfWithTables, downloadExcel } from '../components/printUtils';
+import { ExportButtons } from '../components/ExportButtons';
 import { useAppContext } from '../context/AppContext';
-import { InstrumentoEvaluacion, EvaluationActivity, Student, AcademicGrades, StudentCalculatedGrades } from '../types';
-import { PencilIcon, SaveIcon, PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon, LockClosedIcon, LockOpenIcon } from '../components/icons';
+import { InstrumentoEvaluacion, EvaluationActivity, Student, AcademicGrades, StudentCalculatedGrades, ActivityGrade } from '../types';
+
 
 interface InstrumentoFormModalProps {
     isOpen: boolean;
@@ -185,12 +188,31 @@ const GradesMatrix: React.FC<{
         });
     };
 
+    const handleExport = (format: 'pdf' | 'excel') => {
+        const headers = [['Alumno', ...instrument.activities.map(a => `${a.name} (T${a.trimester.toUpperCase()})`)]];
+        const bodies = [sortedStudents.map(student => [
+            `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
+            ...instrument.activities.map(act => {
+                 const g = instrumentGrades[student.id]?.[act.id];
+                 const grade = typeof g === 'object' && g !== null && 'normal' in g ? g.normal : (typeof g === 'number' ? g : null);
+                 return grade?.toFixed(2) ?? '-';
+            })
+        ])];
+
+        if (format === 'pdf') downloadPdfWithTables(`Instrumento: ${instrument.nombre}`, headers, bodies, {name: 'Teacher'}, {name: 'Institute'});
+        else downloadExcel(`Instrumento: ${instrument.nombre}`, headers, bodies);
+    };
+
     if(instrument.activities.length === 0) {
         return <div className="text-center text-sm text-gray-500 py-4">Este instrumento no tiene actividades de evaluación definidas.</div>
     }
 
     return (
         <div className="overflow-x-auto">
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600 font-semibold text-xs uppercase">Desglose de Notas</span>
+                <ExportButtons onExportPdf={() => handleExport('pdf')} onExportExcel={() => handleExport('excel')} />
+            </div>
             <table className="min-w-full text-xs">
                 <thead className="bg-gray-200">
                     <tr>

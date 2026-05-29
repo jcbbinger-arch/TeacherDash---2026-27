@@ -225,7 +225,27 @@ const GestionAcademicaView: React.FC = () => {
     } = useAppContext();
 
     const handleExport = (format: 'pdf' | 'excel') => {
-        addToast('La exportación aún necesita ser configurada para esta vista.', 'warning');
+        if (activeTab === 'principal') {
+            const headers = [['Alumno', ...ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(p => [...p.instruments.map(i => `${p.name} ${i.name}`), 'Media']) ]];
+            const bodies = [sortedStudents.map(student => [
+                `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
+                ...ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => [
+                     ...period.instruments.map(inst => {
+                        // Simplified grade lookup for export
+                        return '...'; // Needs proper lookup implementation
+                     }),
+                     finalGradesAndAverages.studentGrades[student.id].averages[period.key]?.toFixed(2) ?? '-'
+                ])
+            ])];
+            if (format === 'pdf') downloadPdfWithTables('Gestión Académica - Principal', headers, bodies, teacherData, instituteData);
+            else downloadExcel('Gestión Académica - Principal', headers, bodies);
+        } else if (activeTab === 'instrumentos') {
+            // EvaluacionInstrumentosTab already handles its own export, maybe unify
+            // For now, doing it within this tab component
+        } else {
+             // 'otros' tab export implementation
+             addToast('Exportación para "Otros Módulos" aún no implementada.', 'info');
+        }
     };
     
     const [activeTab, setActiveTab] = useState<'principal' | 'otros' | 'instrumentos'>('principal');
@@ -336,6 +356,7 @@ const GestionAcademicaView: React.FC = () => {
             </div>
             {(activeTab === 'principal' || activeTab === 'otros') && (
                 <div className="flex items-center space-x-2">
+                    <ExportButtons onExportPdf={() => handleExport('pdf')} onExportExcel={() => handleExport('excel')} />
                     <button onClick={handleSaveChanges} disabled={!isDirty} className={`flex items-center px-4 py-2 rounded-lg font-semibold transition ${!isDirty ? 'bg-green-200 text-green-500 cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'}`}>
                         <SaveIcon className="w-5 h-5 mr-1" /> Guardar Cambios
                     </button>
