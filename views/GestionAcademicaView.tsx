@@ -134,6 +134,8 @@ const EvaluacionInstrumentosTab: React.FC = () => {
         addToast('Calificaciones guardadas con éxito.', 'success');
     };
 
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
     return (
         <div>
             <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
@@ -176,8 +178,8 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                         </thead>
                         <tbody>
                              {sortedStudents.map((student, index) => (
-                                <tr key={student.id} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-yellow-50`}>
-                                    <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-yellow-50 ${selectedStudentId === student.id ? 'bg-blue-200' : ''}`}>
+                                    <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} ${selectedStudentId === student.id ? 'bg-blue-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                     {activities.map(act => (
                                         <td key={act.id} className="border">
                                             <input
@@ -392,8 +394,8 @@ const GestionAcademicaView: React.FC = () => {
                             <React.Fragment key={groupName}>
                                 <tr><td colSpan={100} className="bg-gray-200 font-bold p-1 text-left pl-4">{groupName}</td></tr>
                                 {studentsInGroup.map((student, index) => (
-                                    <tr key={student.id} className={`group hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                    <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
+                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => {
                                             const studentAverage = finalGradesAndAverages.studentGrades[student.id].averages[period.key];
                                             return [
@@ -477,8 +479,8 @@ const GestionAcademicaView: React.FC = () => {
                     </thead>
                     <tbody>
                          {students.map((student, index) => (
-                            <tr key={student.id} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-yellow-50`}>
-                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                            <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
+                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                 {COURSE_MODULES.map(module => {
                                     const studentCourseGrades = localCourseGrades[student.id] || {};
                                     const isConvalidated = studentCourseGrades[module.name]?.isConvalidated;

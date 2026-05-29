@@ -121,6 +121,7 @@ const GradesMatrix: React.FC<{
 }> = ({ instrument }) => {
     const { students, instrumentGrades, setInstrumentGrades } = useAppContext();
     const sortedStudents = useMemo(() => [...students].sort((a,b) => a.apellido1.localeCompare(b.apellido1)), [students]);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
     const handleGradeChange = (studentId: string, activityId: string, field: keyof ActivityGrade, value: string) => {
         const numericValue = value === '' ? null : parseFloat(value);
@@ -296,8 +297,14 @@ const GradesMatrix: React.FC<{
                 </thead>
                 <tbody>
                     {sortedStudents.map((student, index) => (
-                        <tr key={student.id} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100`}>
-                            <td className={`p-2 border text-left font-medium text-gray-800 w-48 sticky left-0 group-hover:bg-gray-100 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                        <tr 
+                            key={student.id}
+                            onClick={() => setSelectedStudentId(student.id)}
+                            className={`group cursor-pointer ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} hover:bg-orange-100 ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}
+                        >
+                            <td className={`p-2 border text-left font-medium text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
+                                {`${student.apellido1} ${student.apellido2}, ${student.nombre}`}
+                            </td>
                             {instrument.activities.map(act => {
                                 const grades = instrumentGrades[student.id]?.[act.id];
                                 const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
