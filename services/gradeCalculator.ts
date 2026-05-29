@@ -18,6 +18,8 @@ export const calculateStudentPeriodAverages = (
     ACADEMIC_EVALUATION_STRUCTURE.periods.forEach(period => {
         let totalWeight = 0;
         let weightedSum = 0;
+        let hasAnyGrade = false;
+        
         period.instruments.forEach(instrument => {
             let grade: number | null = null;
             if (instrument.type === 'manual') {
@@ -38,11 +40,13 @@ export const calculateStudentPeriodAverages = (
                 }
             }
             if (grade !== null && !isNaN(grade)) {
-                weightedSum += grade * instrument.weight;
-                totalWeight += instrument.weight;
+                hasAnyGrade = true;
             }
+            const gradeVal = (grade !== null && !isNaN(grade)) ? grade : 0;
+            weightedSum += gradeVal * instrument.weight;
+            totalWeight += instrument.weight;
         });
-        results[period.key] = totalWeight > 0 ? parseFloat((weightedSum / totalWeight).toFixed(2)) : null;
+        results[period.key] = hasAnyGrade ? parseFloat((weightedSum / totalWeight).toFixed(2)) : null;
     });
 
     return results;
