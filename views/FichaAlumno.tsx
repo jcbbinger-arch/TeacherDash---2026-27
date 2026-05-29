@@ -788,8 +788,8 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                  </tr>
                              </thead>
                              <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
-                                {['t1', 't2', 't3'].map(pKey => {
-                                    const trTitle = pKey === 't1' ? '1º Trimestre' : pKey === 't2' ? '2º Trimestre' : '3º Trimestre';
+                                {['t1', 't2', 'rec', 'jun'].map(pKey => {
+                                    const trTitle = { t1: '1º Trimestre', t2: '2º Trimestre', rec: 'Recuperación', jun: 'Junio' }[pKey] || pKey;
                                     const practicalEval = allPracticalExamEvaluations.find(e => e.studentId === student.id && e.examPeriod === pKey);
                                     const finalScore = practicalEval?.finalScore ?? null;
                                     const expandedKey = `academico-practicos-${pKey}`;
