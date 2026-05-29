@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { InstrumentoEvaluacion, EvaluationActivity, Student, AcademicGrades, StudentCalculatedGrades } from '../types';
-import { PencilIcon, SaveIcon, PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from '../components/icons';
+import { PencilIcon, SaveIcon, PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, XIcon, LockClosedIcon, LockOpenIcon } from '../components/icons';
 
 interface InstrumentoFormModalProps {
     isOpen: boolean;
@@ -204,15 +204,30 @@ const GradesMatrix: React.FC<{
                         {instrument.activities.map(act => (
                             <React.Fragment key={act.id}>
                                 <th className="p-1 border text-center">
-                                     <button onClick={() => toggleColumnLock(act.id, 'isLockedNormal')} className={`block mx-auto ${(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedNormal) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
+                                     <button onClick={() => toggleColumnLock(act.id, 'isLockedNormal')} className="focus:outline-none">
+                                        {(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedNormal) ? 
+                                            <LockClosedIcon className="w-5 h-5 text-red-600 hover:text-red-800 mx-auto" /> : 
+                                            <LockOpenIcon className="w-5 h-5 text-green-600 hover:text-green-800 mx-auto" />
+                                        }
+                                     </button>
                                      Nota
                                 </th>
                                 <th className="p-1 border text-center">
-                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec1')} className={`block mx-auto ${(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedRec1) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec1')} className="focus:outline-none">
+                                        {(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedRec1) ? 
+                                            <LockClosedIcon className="w-5 h-5 text-red-600 hover:text-red-800 mx-auto" /> : 
+                                            <LockOpenIcon className="w-5 h-5 text-green-600 hover:text-green-800 mx-auto" />
+                                        }
+                                     </button>
                                      Rec 1
                                 </th>
                                 <th className="p-1 border text-center">
-                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec2')} className={`block mx-auto ${(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedRec2) ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>🔒</button>
+                                    <button onClick={() => toggleColumnLock(act.id, 'isLockedRec2')} className="focus:outline-none">
+                                        {(sortedStudents.length > 0 && (instrumentGrades[sortedStudents[0].id]?.[act.id] as ActivityGrade)?.isLockedRec2) ? 
+                                            <LockClosedIcon className="w-5 h-5 text-red-600 hover:text-red-800 mx-auto" /> : 
+                                            <LockOpenIcon className="w-5 h-5 text-green-600 hover:text-green-800 mx-auto" />
+                                        }
+                                     </button>
                                      Rec 2
                                 </th>
                                 <th className="p-1 border text-center">Final</th>

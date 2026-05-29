@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Student, CourseModuleGrades, GradeValue, StudentCalculatedGrades, InstrumentoEvaluacion } from '../types';
 import { ACADEMIC_EVALUATION_STRUCTURE, COURSE_MODULES } from '../data/constants';
-import { ClipboardListIcon, SaveIcon, ExportIcon, PencilIcon } from '../components/icons';
+import { ClipboardListIcon, SaveIcon, ExportIcon, PencilIcon, LockClosedIcon, LockOpenIcon } from '../components/icons';
 import { downloadPdfWithTables } from '../components/printUtils';
 import { useAppContext } from '../context/AppContext';
 import { calculateStudentPeriodAverages, calculateModularGrades } from '../services/gradeCalculator';
@@ -19,6 +19,7 @@ const EvaluacionInstrumentosTab: React.FC = () => {
     const [selectedModule, setSelectedModule] = useState<'optativa' | 'proyecto'>('optativa');
     const [localGrades, setLocalGrades] = useState(instrumentGrades);
     const [isDirty, setIsDirty] = useState(false);
+    const [unlockedActivityIds, setUnlockedActivityIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         setLocalGrades(instrumentGrades);
@@ -31,14 +32,33 @@ const EvaluacionInstrumentosTab: React.FC = () => {
             if (window.confirm('Tienes cambios sin guardar. ¿Quieres descartarlos y cambiar de módulo?')) {
                 setLocalGrades(instrumentGrades);
                 setIsDirty(false);
+                setUnlockedActivityIds(new Set());
             } else {
                 // Revert module selection
                 setSelectedModule(prev => prev === 'optativa' ? 'proyecto' : 'optativa');
             }
+        } else {
+            setUnlockedActivityIds(new Set());
         }
     }, [selectedModule]);
 
+    const toggleActivityLock = (activityId: string) => {
+        setUnlockedActivityIds(prev => {
+            const next = new Set(prev);
+            if (next.has(activityId)) {
+                next.delete(activityId);
+            } else {
+                next.add(activityId);
+            }
+            return next;
+        });
+    };
+
     const handlePasteColumn = (e: React.ClipboardEvent, startIndex: number, activityId: string) => {
+        if (!unlockedActivityIds.has(activityId)) {
+            addToast('Columna bloqueada. Ábrela (candado verde) para poder pegar datos.', 'error');
+            return;
+        }                
         e.preventDefault();
         const text = e.clipboardData.getData('text');
         const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
@@ -119,7 +139,16 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                                 <th className="p-2 border font-semibold text-gray-600 w-48 text-left sticky left-0 bg-gray-100">Alumno</th>
                                 {activities.map(act => (
                                     <th key={act.id} className="p-2 border font-semibold text-gray-600" title={act.instrumentName}>
-                                        {act.name} ({act.trimester.toUpperCase()})
+                                        <div className="flex items-center justify-center gap-2">
+                                            {act.name} ({act.trimester.toUpperCase()})
+                                            <button onClick={() => toggleActivityLock(act.id)} className="focus:outline-none">
+                                                {unlockedActivityIds.has(act.id) ? (
+                                                    <LockOpenIcon className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <LockClosedIcon className="w-4 h-4 text-red-600" />
+                                                )}
+                                            </button>
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
