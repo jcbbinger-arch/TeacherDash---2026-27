@@ -200,7 +200,7 @@ const GradesMatrix: React.FC<{
                 const studentIndex = startIndex + i;
                 if (studentIndex < sortedStudents.length) {
                     const student = sortedStudents[studentIndex];
-                    const numericValue = parseFloat(rowValue.trim());
+                    const numericValue = parseFloat(rowValue.trim().replace(',', '.'));
                     if (!isNaN(numericValue) && numericValue >= 0 && numericValue <= 10) {
                         const studentGrades = newGrades[student.id] || {};
                         const currentGrade = studentGrades[activityId];

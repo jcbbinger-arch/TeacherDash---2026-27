@@ -87,7 +87,7 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                 const studentIndex = startIndex + i;
                 if (studentIndex < sortedStudents.length) {
                     const student = sortedStudents[studentIndex];
-                    const numericValue = parseFloat(rowValue.trim());
+                    const numericValue = parseFloat(rowValue.trim().replace(',', '.'));
                     if (!isNaN(numericValue) && numericValue >= 0 && numericValue <= 10) {
                         if (!newGrades[student.id]) newGrades[student.id] = {};
                         newGrades[student.id][activityId] = numericValue;
@@ -250,6 +250,7 @@ const GestionAcademicaView: React.FC = () => {
     };
     
     const [activeTab, setActiveTab] = useState<'principal' | 'otros' | 'instrumentos'>('principal');
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [localAcademicGrades, setLocalAcademicGrades] = useState(academicGrades);
     const [localCourseGrades, setLocalCourseGrades] = useState(courseGrades);
     const [isDirty, setIsDirty] = useState(false);
