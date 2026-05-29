@@ -38,6 +38,29 @@ const EvaluacionInstrumentosTab: React.FC = () => {
         }
     }, [selectedModule]);
 
+    const handlePasteColumn = (e: React.ClipboardEvent, startIndex: number, activityId: string) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text');
+        const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
+        
+        setLocalGrades(prev => {
+            const newGrades = JSON.parse(JSON.stringify(prev));
+            rows.forEach((rowValue, i) => {
+                const studentIndex = startIndex + i;
+                if (studentIndex < sortedStudents.length) {
+                    const student = sortedStudents[studentIndex];
+                    const numericValue = parseFloat(rowValue.trim());
+                    if (!isNaN(numericValue) && numericValue >= 0 && numericValue <= 10) {
+                        if (!newGrades[student.id]) newGrades[student.id] = {};
+                        newGrades[student.id][activityId] = numericValue;
+                    }
+                }
+            });
+            return newGrades;
+        });
+        setIsDirty(true);
+    };
+
 
     const activities = useMemo(() => {
         const instruments = selectedModule === 'optativa' ? optativaInstrumentosEvaluacion : proyectoInstrumentosEvaluacion;
@@ -113,6 +136,12 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                                                 min="0" max="10"
                                                 value={localGrades[student.id]?.[act.id] ?? ''}
                                                 onChange={e => handleGradeChange(student.id, act.id, e.target.value)}
+                                                onPaste={e => {
+                                                    const text = e.clipboardData.getData('text');
+                                                    if (text.includes('\n') || text.includes('\r')) {
+                                                        handlePasteColumn(e, index, act.id);
+                                                    }
+                                                }}
                                                 className="w-20 p-1.5 text-center bg-transparent focus:bg-yellow-100 outline-none"
                                             />
                                         </td>
