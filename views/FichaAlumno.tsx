@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Student, TimelineEvent, PreServiceDayEvaluation, ResultadoAprendizaje, Service, CourseModuleGrades, GradeValue, CriterioEvaluacion, StudentCalculatedGrades, ActivityGrade } from '../types';
 import { 
     PencilIcon,
@@ -728,8 +728,149 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                              </tbody>
                         </table>
 
-                         <h4 className="font-bold text-gray-700 mb-2">Servicios y Prácticos (Averages)</h4>
+                         <h4 className="font-bold text-gray-700 mb-2 mt-4">Servicios (PC)</h4>
+                         <table className="min-w-full text-sm text-center mb-6">
+                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
+                                 <tr>
+                                     <th className="p-2 text-left">Trimestre / Servicio</th>
+                                     <th className="p-2">Nota</th>
+                                     <th className="p-2"></th>
+                                 </tr>
+                             </thead>
+                             <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+                                {['t1', 't2', 't3'].map(pKey => {
+                                    const trTitle = pKey === 't1' ? '1º Trimestre' : pKey === 't2' ? '2º Trimestre' : '3º Trimestre';
+                                    const servicesInPeriod = studentServicesData.filter(s => s.service.trimester === pKey);
+                                    const gradedServices = servicesInPeriod.map(s => s.studentGrade).filter(g => g !== null) as number[];
+                                    const avg = gradedServices.length > 0 ? gradedServices.reduce((sum, s) => sum + s, 0) / gradedServices.length : null;
+                                    const expandedKey = `academico-servicios-${pKey}`;
+                                    const isExpanded = expandedAcademicRows.has(expandedKey);
+
+                                    return (
+                                        <React.Fragment key={pKey}>
+                                            <tr className="bg-gray-100 font-bold border-t cursor-pointer" onClick={() => setExpandedAcademicRows(p => p.has(expandedKey) ? (p.delete(expandedKey), new Set(p)) : new Set(p.add(expandedKey)))}>
+                                                <td className="p-2 text-left">{trTitle}</td>
+                                                <td className="p-2 text-center font-bold">
+                                                    {avg !== null ? (avg < 5 ? <span className="text-red-500">{avg.toFixed(2)}</span> : <span className="text-green-600">{avg.toFixed(2)}</span>) : '-'}
+                                                </td>
+                                                <td className="p-2 text-center">
+                                                    {isExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
+                                                servicesInPeriod.length > 0 ? (
+                                                    servicesInPeriod.map(s => (
+                                                        <tr key={s.service.id} className="bg-gray-50 text-xs">
+                                                            <td className="p-2 pl-6 text-left">{s.service.name}</td>
+                                                            <td className="p-2 font-medium">{s.isAbsent ? <span className="text-red-500 font-semibold">AUS</span> : s.studentGrade !== null ? (s.studentGrade < 5 ? <span className="text-red-500">{s.studentGrade.toFixed(2)}</span> : <span className="text-green-600">{s.studentGrade.toFixed(2)}</span>) : '-'}</td>
+                                                            <td className="p-2"></td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr className="bg-gray-50 text-xs">
+                                                        <td colSpan={3} className="p-2 pl-6 text-left italic text-gray-400">No hay servicios registrados en este trimestre.</td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                             </tbody>
+                         </table>
+
+                         <h4 className="font-bold text-gray-700 mb-2">Exámenes Prácticos (PC)</h4>
                          <table className="min-w-full text-sm text-center">
+                             <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
+                                 <tr>
+                                     <th className="p-2 text-left">Trimestre / R.A. / Criterio</th>
+                                     <th className="p-2">Nota / Calificación</th>
+                                     <th className="p-2">Observaciones</th>
+                                 </tr>
+                             </thead>
+                             <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+                                {['t1', 't2', 't3'].map(pKey => {
+                                    const trTitle = pKey === 't1' ? '1º Trimestre' : pKey === 't2' ? '2º Trimestre' : '3º Trimestre';
+                                    const practicalEval = allPracticalExamEvaluations.find(e => e.studentId === student.id && e.examPeriod === pKey);
+                                    const finalScore = practicalEval?.finalScore ?? null;
+                                    const expandedKey = `academico-practicos-${pKey}`;
+                                    const isExpanded = expandedAcademicRows.has(expandedKey);
+
+                                    return (
+                                        <React.Fragment key={pKey}>
+                                            <tr className="bg-gray-100 font-bold border-t cursor-pointer" onClick={() => setExpandedAcademicRows(p => p.has(expandedKey) ? (p.delete(expandedKey), new Set(p)) : new Set(p.add(expandedKey)))}>
+                                                <td className="p-2 text-left">{trTitle}</td>
+                                                <td className="p-2 text-center font-bold">
+                                                    {finalScore !== null && finalScore !== undefined ? (finalScore < 5 ? <span className="text-red-500">{finalScore.toFixed(2)}</span> : <span className="text-green-600">{finalScore.toFixed(2)}</span>) : '-'}
+                                                </td>
+                                                <td className="p-2 text-center">
+                                                    {isExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}
+                                                </td>
+                                            </tr>
+                                            {isExpanded && (
+                                                practicalEval ? (
+                                                    PRACTICAL_EXAM_RUBRIC.map(ra => {
+                                                        let raScoreSum = 0;
+                                                        let criteriaCount = 0;
+                                                        ra.criteria.forEach(criterion => {
+                                                            const scoreInfo = practicalEval.scores?.[ra.id]?.[criterion.id];
+                                                            if (scoreInfo && typeof scoreInfo.score === 'number') {
+                                                                raScoreSum += scoreInfo.score;
+                                                                criteriaCount++;
+                                                            }
+                                                        });
+                                                        const raAvg = criteriaCount > 0 ? raScoreSum / criteriaCount : null;
+                                                        const raRowKey = `ra-${pKey}-${ra.id}`;
+                                                        const isRaExpanded = expandedAcademicRows.has(raRowKey);
+
+                                                        return (
+                                                            <React.Fragment key={ra.id}>
+                                                                <tr className="bg-gray-50 text-xs border-b cursor-pointer hover:bg-gray-100" onClick={() => setExpandedAcademicRows(p => {
+                                                                    const next = new Set(p);
+                                                                    if (next.has(raRowKey)) next.delete(raRowKey);
+                                                                    else next.add(raRowKey);
+                                                                    return next;
+                                                                })}>
+                                                                    <td className="p-2 pl-6 text-left font-semibold text-gray-700 flex items-center">
+                                                                        {isRaExpanded ? <ChevronDownIcon className="w-3 mx-1 font-bold text-blue-500" /> : <ChevronRightIcon className="w-3 mx-1 text-gray-400" />}
+                                                                        {ra.name} ({(ra.weight * 100).toFixed(0)}%)
+                                                                    </td>
+                                                                    <td className="p-2 font-bold text-center">
+                                                                        {raAvg !== null ? (raAvg < 5 ? <span className="text-red-500">{raAvg.toFixed(2)}</span> : <span className="text-green-600">{raAvg.toFixed(2)}</span>) : '-'}
+                                                                    </td>
+                                                                    <td className="p-2"></td>
+                                                                </tr>
+                                                                {isRaExpanded && ra.criteria.map(criterion => {
+                                                                    const scoreInfo = practicalEval.scores?.[ra.id]?.[criterion.id];
+                                                                    return (
+                                                                        <tr key={criterion.id} className="bg-gray-100 text-[11px] leading-relaxed">
+                                                                            <td className="p-2 pl-12 text-left text-gray-600 max-w-sm truncate" title={criterion.name}>
+                                                                                {criterion.name}
+                                                                            </td>
+                                                                            <td className="p-2 text-center text-gray-700 font-medium">
+                                                                                {scoreInfo?.score !== null && scoreInfo?.score !== undefined ? scoreInfo.score : '-'}
+                                                                            </td>
+                                                                            <td className="p-2 text-left text-gray-500 max-w-xs truncate" title={scoreInfo?.notes}>
+                                                                                {scoreInfo?.notes || ''}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </React.Fragment>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <tr className="bg-gray-50 text-xs">
+                                                        <td colSpan={3} className="p-2 pl-6 text-left italic text-gray-400">No hay examen práctico calificado en este trimestre.</td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                             </tbody>
+                         </table>
+
+                             <table className="hidden">
                              <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
                                  <tr>
                                      <th className="p-2 text-left">Categoría</th>
