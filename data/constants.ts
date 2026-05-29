@@ -113,20 +113,20 @@ export const ACADEMIC_EVALUATION_STRUCTURE = {
       key: "t1",
       name: "1º Trimestre",
       instruments: [
-        { name: "Examen 1", type: "manual", key: "examen1", weight: 0.10 }, // 10% del curso
-        { name: "Examen 2", type: "manual", key: "examen2", weight: 0.10 }, // 10% del curso
-        { name: "Servicios", type: "calculated", key: "servicios", weight: 0.15 }, // 15% del curso
-        { name: "Ex. Práctico", type: "calculated", key: "exPracticoT1", weight: 0.15 }, // 15% del curso
+        { name: "Examen 1", type: "manual", key: "examen1", weight: 0.125 }, // 12.5% del curso (25% del trimestre)
+        { name: "Examen 2", type: "manual", key: "examen2", weight: 0.125 }, // 12.5% del curso (25% del trimestre)
+        { name: "Servicios", type: "calculated", key: "servicios", weight: 0.15 }, // 15% del curso (30% del trimestre)
+        { name: "Ex. Práctico", type: "calculated", key: "exPracticoT1", weight: 0.10 }, // 10% del curso (20% del trimestre)
       ]
     },
     {
       key: "t2",
       name: "2º Trimestre",
       instruments: [
-        { name: "Examen 1", type: "manual", key: "examen1", weight: 0.10 }, // 10% del curso
-        { name: "Examen 2", type: "manual", key: "examen2", weight: 0.10 }, // 10% del curso
-        { name: "Servicios", type: "calculated", key: "servicios", weight: 0.15 }, // 15% del curso
-        { name: "Ex. Práctico", type: "calculated", key: "exPracticoT2", weight: 0.15 }, // 15% del curso
+        { name: "Examen 1", type: "manual", key: "examen1", weight: 0.125 }, // 12.5% del curso (25% del trimestre)
+        { name: "Examen 2", type: "manual", key: "examen2", weight: 0.125 }, // 12.5% del curso (25% del trimestre)
+        { name: "Servicios", type: "calculated", key: "servicios", weight: 0.15 }, // 15% del curso (30% del trimestre)
+        { name: "Ex. Práctico", type: "calculated", key: "exPracticoT2", weight: 0.10 }, // 10% del curso (20% del trimestre)
       ]
     },
     {

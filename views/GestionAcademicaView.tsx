@@ -171,12 +171,18 @@ const GestionAcademicaView: React.FC = () => {
         const studentGrades: Record<string, { averages: Record<string, number | null> }> = {};
         students.forEach(student => {
             studentGrades[student.id] = {
-                averages: calculateStudentPeriodAverages(localAcademicGrades[student.id], calculatedStudentGrades[student.id])
+                averages: calculateStudentPeriodAverages(
+                    localAcademicGrades[student.id],
+                    calculatedStudentGrades[student.id],
+                    student.id,
+                    instrumentGrades,
+                    pcInstrumentosEvaluacion
+                )
             };
         });
         
         return { studentGroups, studentGrades };
-    }, [students, localAcademicGrades, calculatedStudentGrades]);
+    }, [students, localAcademicGrades, calculatedStudentGrades, instrumentGrades, pcInstrumentosEvaluacion]);
 
     const handleManualGradeChange = (studentId: string, periodKey: string, instrumentKey: string, value: string) => {
         const numericValue = value === '' ? null : parseFloat(value);
@@ -315,9 +321,13 @@ const GestionAcademicaView: React.FC = () => {
                                                         instrument.key === 'examen1' || instrument.key === 'examen2' ? (
                                                             <span className="p-1.5 block font-medium">
                                                                 {(() => {
-                                                                    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => inst.nombre === 'Examen');
-                                                                    const activityName = instrument.key === 'examen1' ? 'Examen 1' : 'Examen 2';
-                                                                    const activity = examInstrument?.activities.find(act => act.name === activityName);
+                                                                    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
+                                                                        inst.nombre?.toLowerCase() === 'examen' || inst.id?.toLowerCase() === 'examen'
+                                                                    );
+                                                                    if (!examInstrument) return '-';
+                                                                    const activitiesInPeriod = (examInstrument.activities || []).filter(a => a.trimester === period.key);
+                                                                    const activityIndex = instrument.key === 'examen1' ? 0 : 1;
+                                                                    const activity = activitiesInPeriod[activityIndex];
                                                                     if (!activity) return '-';
                                                                     const grades = instrumentGrades[student.id]?.[activity.id];
                                                                     const grade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);

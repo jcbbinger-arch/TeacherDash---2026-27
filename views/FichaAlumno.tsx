@@ -314,7 +314,9 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
           allCourseGrades[student.id],
           timelineEvents,
           teacherData,
-          instituteData
+          instituteData,
+          instrumentGrades,
+          pcInstrumentosEvaluacion
       );
   };
   
@@ -643,6 +645,49 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
         
         {activeTab === 'academico' && (
              <div className="space-y-8">
+                {/* Resumen del Módulo Principal (PC) with Medias Ponderadas */}
+                {(() => {
+                    const periodAverages = calculateStudentPeriodAverages(
+                        allAcademicGrades[student.id], 
+                        allCalculatedGrades[student.id],
+                        student.id,
+                        instrumentGrades,
+                        pcInstrumentosEvaluacion
+                    );
+                    const validPeriodGrades = [periodAverages.t1, periodAverages.t2].filter(g => g !== null) as number[];
+                    const finalCourseAverage = validPeriodGrades.length > 0 
+                        ? validPeriodGrades.reduce((a, b) => a + b, 0) / validPeriodGrades.length 
+                        : null;
+                    return (
+                        <div className="bg-white shadow-md rounded-lg overflow-hidden border border-blue-100 p-4">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                                <span className="w-2.5 h-5 bg-blue-600 rounded-sm mr-2 inline-block"></span>
+                                Resumen del Módulo Principal (PC) - Media Ponderada
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-1">
+                                <div className="p-3 bg-gray-50 rounded-lg text-center border">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">1º Trimestre</p>
+                                    <p className={`text-2xl font-black mt-1 ${periodAverages.t1 !== null && periodAverages.t1 < 5 ? 'text-red-500' : 'text-blue-600'}`}>
+                                        {periodAverages.t1 !== null ? periodAverages.t1.toFixed(2) : '-'}
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-gray-50 rounded-lg text-center border">
+                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">2º Trimestre</p>
+                                    <p className={`text-2xl font-black mt-1 ${periodAverages.t2 !== null && periodAverages.t2 < 5 ? 'text-red-500' : 'text-blue-600'}`}>
+                                        {periodAverages.t2 !== null ? periodAverages.t2.toFixed(2) : '-'}
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-blue-50/55 rounded-lg text-center border border-blue-200">
+                                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Media Final del Curso</p>
+                                    <p className={`text-2xl font-black mt-1 ${finalCourseAverage !== null && finalCourseAverage < 5 ? 'text-red-500' : 'text-green-600'}`}>
+                                        {finalCourseAverage !== null ? finalCourseAverage.toFixed(2) : '-'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 <div className="bg-white shadow-md rounded-lg overflow-hidden">
                     <h3 className="text-lg font-bold text-gray-800 p-4 border-b">Resumen Integral de Calificaciones</h3>
                     <div className="overflow-x-auto p-4">

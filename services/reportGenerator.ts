@@ -556,7 +556,9 @@ export const generateStudentFilePDF = (
     courseGrades: StudentCourseGrades | undefined,
     timelineEvents: TimelineEvent[],
     teacherData: TeacherData,
-    instituteData: InstituteData
+    instituteData: InstituteData,
+    instrumentGrades?: InstrumentGrades,
+    pcInstrumentosEvaluacion?: Record<string, InstrumentoEvaluacion>
 ) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -564,7 +566,13 @@ export const generateStudentFilePDF = (
     let lastY = 0;
 
     const fullName = `${student.apellido1} ${student.apellido2}, ${student.nombre}`;
-    const finalAverages = calculateStudentPeriodAverages(academicGrades, calculatedGrades);
+    const finalAverages = calculateStudentPeriodAverages(
+        academicGrades, 
+        calculatedGrades, 
+        student.id, 
+        instrumentGrades, 
+        pcInstrumentosEvaluacion
+    );
 
     const didDrawPage = (data: any) => addFooter(doc, data, teacherData, instituteData);
 

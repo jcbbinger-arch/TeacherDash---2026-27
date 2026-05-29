@@ -14,6 +14,7 @@ const AlumnosView: React.FC = () => {
       students, setStudents,
       pcResultadosAprendizaje: resultadosAprendizaje,
       pcCriteriosEvaluacion: criteriosEvaluacion,
+      pcInstrumentosEvaluacion,
       academicGrades,
       instrumentGrades,
       calculatedStudentGrades,
@@ -51,7 +52,10 @@ const AlumnosView: React.FC = () => {
         // Course Average Calculation (Academic Grade)
         const periodAverages = calculateStudentPeriodAverages(
             academicGrades[student.id], 
-            calculatedStudentGrades[student.id]
+            calculatedStudentGrades[student.id],
+            student.id,
+            instrumentGrades,
+            pcInstrumentosEvaluacion
         );
         
         const validPeriodGrades = [periodAverages.t1, periodAverages.t2].filter(g => g !== null) as number[];
@@ -61,7 +65,7 @@ const AlumnosView: React.FC = () => {
 
         return { ...student, raProgress, courseAverage };
     });
-  }, [students, resultadosAprendizaje, criteriosEvaluacion, academicGrades, instrumentGrades, calculatedStudentGrades]);
+  }, [students, resultadosAprendizaje, criteriosEvaluacion, academicGrades, instrumentGrades, calculatedStudentGrades, pcInstrumentosEvaluacion]);
 
 
   const filteredStudents = useMemo(() => {

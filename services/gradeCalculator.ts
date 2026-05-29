@@ -4,7 +4,10 @@ import { ACADEMIC_EVALUATION_STRUCTURE } from '../data/constants';
 
 export const calculateStudentPeriodAverages = (
     academicGrades: StudentAcademicGrades | undefined,
-    calculatedGrades: StudentCalculatedGrades | undefined
+    calculatedGrades: StudentCalculatedGrades | undefined,
+    studentId?: string,
+    instrumentGrades?: InstrumentGrades,
+    pcInstrumentosEvaluacion?: Record<string, InstrumentoEvaluacion>
 ): Record<string, number | null> => {
     const results: { [periodKey: string]: number | null } = {};
 
@@ -23,8 +26,34 @@ export const calculateStudentPeriodAverages = (
         period.instruments.forEach(instrument => {
             let grade: number | null = null;
             if (instrument.type === 'manual') {
-                const manualGrade = academicGrades?.[period.key]?.manualGrades?.[instrument.key];
-                grade = (manualGrade === null || manualGrade === undefined) ? null : parseFloat(String(manualGrade));
+                if (studentId && instrumentGrades && pcInstrumentosEvaluacion && (instrument.key === 'examen1' || instrument.key === 'examen2')) {
+                    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
+                        inst.nombre?.toLowerCase() === 'examen' || inst.id?.toLowerCase() === 'examen'
+                    );
+                    if (examInstrument) {
+                        const activitiesInPeriod = (examInstrument.activities || []).filter(a => a.trimester === period.key);
+                        const activityIndex = instrument.key === 'examen1' ? 0 : 1;
+                        const activity = activitiesInPeriod[activityIndex];
+                        if (activity) {
+                            const g = instrumentGrades[studentId]?.[activity.id];
+                            if (g !== null && g !== undefined) {
+                                if (typeof g === 'object' && 'normal' in g) {
+                                    const normal = g.normal;
+                                    const rec1 = g.rec1 ?? null;
+                                    const rec2 = g.rec2 ?? null;
+                                    grade = Math.max(normal ?? 0, rec1 ?? 0, rec2 ?? 0);
+                                } else if (typeof g === 'number') {
+                                    grade = g;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (grade === null) {
+                    const manualGrade = academicGrades?.[period.key]?.manualGrades?.[instrument.key];
+                    grade = (manualGrade === null || manualGrade === undefined) ? null : parseFloat(String(manualGrade));
+                }
             } else { // calculated
                 if (instrument.key === 'servicios') {
                     const periodKey = period.key as 't1' | 't2' | 't3';
