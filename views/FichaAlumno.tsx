@@ -133,6 +133,7 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
     practiceGroups,
     serviceEvaluations,
     practicalExamEvaluations: allPracticalExamEvaluations,
+    setPracticalExamEvaluations,
     entryExitRecords: allEntryExitRecords,
     handleDeleteEntryExitRecord,
     addToast
@@ -800,7 +801,19 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                             <tr className="bg-gray-100 font-bold border-t cursor-pointer" onClick={() => setExpandedAcademicRows(p => p.has(expandedKey) ? (p.delete(expandedKey), new Set(p)) : new Set(p.add(expandedKey)))}>
                                                 <td className="p-2 text-left">{trTitle}</td>
                                                 <td className="p-2 text-center font-bold">
-                                                    {finalScore !== null && finalScore !== undefined ? (finalScore < 5 ? <span className="text-red-500">{finalScore.toFixed(2)}</span> : <span className="text-green-600">{finalScore.toFixed(2)}</span>) : '-'}
+                                                    {isEditing ? (
+                                                        <input 
+                                                            type="number"
+                                                            value={finalScore ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = parseFloat(e.target.value);
+                                                                setPracticalExamEvaluations(prev => prev.map(ev => ev.studentId === student.id && ev.examPeriod === pKey ? {...ev, finalScore: isNaN(val) ? null : val} : ev));
+                                                            }}
+                                                            className="w-16 p-1 border rounded text-center"
+                                                        />
+                                                    ) : (
+                                                        finalScore !== null && finalScore !== undefined ? (finalScore < 5 ? <span className="text-red-500">{finalScore.toFixed(2)}</span> : <span className="text-green-600">{finalScore.toFixed(2)}</span>) : '-'
+                                                    )}
                                                 </td>
                                                 <td className="p-2 text-center">
                                                     {isExpanded ? <ChevronDownIcon className="w-4 h-4 mx-auto" /> : <ChevronRightIcon className="w-4 h-4 mx-auto" />}
@@ -847,7 +860,28 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
                                                                                 {criterion.name}
                                                                             </td>
                                                                             <td className="p-2 text-center text-gray-700 font-medium">
-                                                                                {scoreInfo?.score !== null && scoreInfo?.score !== undefined ? scoreInfo.score : '-'}
+                                                                                {isEditing ? (
+                                                                                    <input 
+                                                                                        type="number"
+                                                                                        value={scoreInfo?.score ?? ''}
+                                                                                        onChange={(e) => {
+                                                                                            const score = parseFloat(e.target.value);
+                                                                                            setPracticalExamEvaluations(prev => prev.map(ev => ev.studentId === student.id && ev.examPeriod === pKey ? {
+                                                                                                ...ev,
+                                                                                                scores: {
+                                                                                                    ...ev.scores,
+                                                                                                    [ra.id]: {
+                                                                                                        ...ev.scores?.[ra.id],
+                                                                                                        [criterion.id]: {...ev.scores?.[ra.id]?.[criterion.id], score: isNaN(score) ? null : score}
+                                                                                                    }
+                                                                                                }
+                                                                                            } : ev));
+                                                                                        }}
+                                                                                        className="w-12 p-0.5 border rounded text-center"
+                                                                                    />
+                                                                                ) : (
+                                                                                    scoreInfo?.score !== null && scoreInfo?.score !== undefined ? scoreInfo.score : '-'
+                                                                                )}
                                                                             </td>
                                                                             <td className="p-2 text-left text-gray-500 max-w-xs truncate" title={scoreInfo?.notes}>
                                                                                 {scoreInfo?.notes || ''}
