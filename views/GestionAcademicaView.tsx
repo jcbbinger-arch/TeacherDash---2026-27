@@ -178,8 +178,8 @@ const EvaluacionInstrumentosTab: React.FC = () => {
                         </thead>
                         <tbody>
                              {sortedStudents.map((student, index) => (
-                                <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-yellow-50 ${selectedStudentId === student.id ? 'bg-blue-200' : ''}`}>
-                                    <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} ${selectedStudentId === student.id ? 'bg-blue-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                <tr key={student.id} className={`group ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-yellow-50`}>
+                                    <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-yellow-50 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                     {activities.map(act => (
                                         <td key={act.id} className="border">
                                             <input
@@ -250,10 +250,11 @@ const GestionAcademicaView: React.FC = () => {
     };
     
     const [activeTab, setActiveTab] = useState<'principal' | 'otros' | 'instrumentos'>('principal');
-    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [localAcademicGrades, setLocalAcademicGrades] = useState(academicGrades);
     const [localCourseGrades, setLocalCourseGrades] = useState(courseGrades);
     const [isDirty, setIsDirty] = useState(false);
+    
+    const sortedStudents = useMemo(() => [...students].sort((a, b) => a.apellido1.localeCompare(b.apellido1)), [students]);
     
     useEffect(() => {
         setLocalAcademicGrades(JSON.parse(JSON.stringify(academicGrades)));
@@ -348,7 +349,16 @@ const GestionAcademicaView: React.FC = () => {
 
     return (
     <div>
-        <header className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <style type="text/css">{`
+            @media print {
+                .no-print { display: none !important; }
+                table { page-break-inside: auto; width: 100%; border-collapse: collapse; }
+                thead { display: table-header-group; }
+                tr { page-break-inside: avoid; }
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+        `}</style>
+        <header className="no-print flex flex-wrap justify-between items-center gap-4 mb-6">
             <div>
                 <h1 className="text-3xl font-bold text-gray-800 flex items-center">
                     <ClipboardListIcon className="w-8 h-8 mr-3 text-purple-500" />
@@ -366,7 +376,7 @@ const GestionAcademicaView: React.FC = () => {
             )}
         </header>
 
-        <div className="border-b border-gray-200 mb-6">
+        <div className="no-print border-b border-gray-200 mb-6">
             <nav className="flex space-x-2">
                  <button onClick={() => setActiveTab('principal')} className={`px-4 py-2 font-medium text-sm rounded-md ${activeTab === 'principal' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}>Módulo Principal (PC)</button>
                  <button onClick={() => setActiveTab('instrumentos')} className={`px-4 py-2 font-medium text-sm rounded-md ${activeTab === 'instrumentos' ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}><PencilIcon className="w-4 h-4 mr-2 inline-block"/>Evaluación por Instrumentos</button>
@@ -385,7 +395,7 @@ const GestionAcademicaView: React.FC = () => {
                         </tr>
                         <tr>
                             {ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => [
-                                ...period.instruments.map(instrument => (<th key={`${period.key}-${instrument.key}`} className={`p-2 border font-semibold text-gray-500 text-[10px] ${instrument.type === 'calculated' ? 'bg-blue-50' : ''}`}>{instrument.name} ({instrument.weight * 100}%)</th>)),
+                                ...period.instruments.map(instrument => (<th key={`${period.key}-${instrument.key}`} className={`p-2 border font-semibold text-gray-500 text-[10px]`}>{instrument.name} ({instrument.weight * 100}%)</th>)),
                                 <th key={`${period.key}-avg`} className="p-2 border font-bold text-gray-700 bg-gray-200">MEDIA</th>
                             ])}
                         </tr>
@@ -395,8 +405,8 @@ const GestionAcademicaView: React.FC = () => {
                             <React.Fragment key={groupName}>
                                 <tr><td colSpan={100} className="bg-gray-200 font-bold p-1 text-left pl-4">{groupName}</td></tr>
                                 {studentsInGroup.map((student, index) => (
-                                    <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
-                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                <tr key={student.id} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'}`}>
+                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => {
                                             const studentAverage = finalGradesAndAverages.studentGrades[student.id].averages[period.key];
                                             return [
@@ -480,8 +490,8 @@ const GestionAcademicaView: React.FC = () => {
                     </thead>
                     <tbody>
                          {students.map((student, index) => (
-                            <tr key={student.id} onClick={() => setSelectedStudentId(student.id)} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'} ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>
-                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-orange-100 ${selectedStudentId === student.id ? 'bg-orange-200' : ''}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                            <tr key={student.id} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'}`}>
+                                <td className={`p-1 border text-left font-semibold text-gray-800 sticky left-0 group-hover:bg-orange-100`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                 {COURSE_MODULES.map(module => {
                                     const studentCourseGrades = localCourseGrades[student.id] || {};
                                     const isConvalidated = studentCourseGrades[module.name]?.isConvalidated;
