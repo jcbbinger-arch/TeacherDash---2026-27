@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { UnidadTrabajo, CriterioEvaluacion, ResultadoAprendizaje, InstrumentoEvaluacion } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, SaveIcon, XIcon, BookOpenIcon, ChevronDownIcon, ChevronRightIcon, PrinterIcon } from '../components/icons';
-import { generateFullPlanningPDF } from '../services/reportGenerator';
 
 interface UTFormModalProps {
     isOpen: boolean;
@@ -183,36 +182,6 @@ const UTView: React.FC<UTViewProps> = ({ module }) => {
         });
     };
     
-    const handlePrintAll = () => {
-        const allUTs = Object.values(unidadesTrabajo) as UnidadTrabajo[];
-        
-        const allUTData = allUTs.map(ut => {
-             const grouped: Record<string, { ra: ResultadoAprendizaje; criterios: { criterio: CriterioEvaluacion; instrumentos: string[] }[] }> = {};
-            
-            const allCriterios = Object.values(criteriosEvaluacion) as CriterioEvaluacion[];
-            const criteriaForThisUT = allCriterios.filter(c => (c.asociaciones || []).some(a => a.utId === ut.id));
-
-            criteriaForThisUT.forEach(crit => {
-                const raId = crit.raId;
-                if (!raId || !resultadosAprendizaje[raId]) return;
-                if (!grouped[raId]) grouped[raId] = { ra: resultadosAprendizaje[raId], criterios: [] };
-                
-                const asociacionForThisUT = (crit.asociaciones || []).find(a => a.utId === ut.id);
-                const instrumentos = (asociacionForThisUT?.activityIds || []).map(actId => {
-                    for (const inst of Object.values(instrumentosEvaluacion) as InstrumentoEvaluacion[]) {
-                        const activity = inst.activities.find(a => a.id === actId);
-                        if (activity) return `${inst.nombre}: ${activity.name} (${activity.trimester.toUpperCase()})`;
-                    }
-                    return 'Actividad no encontrada';
-                });
-                grouped[raId].criterios.push({ criterio: crit, instrumentos });
-            });
-            return { ut, associatedRAs: Object.values(grouped).sort((a,b)=>a.ra.nombre.localeCompare(b.ra.nombre)) };
-        });
-
-        generateFullPlanningPDF(allUTData, teacherData, instituteData);
-    };
-
     return (
         <div>
             <header className="flex flex-wrap justify-between items-center gap-4 mb-8">
@@ -221,9 +190,7 @@ const UTView: React.FC<UTViewProps> = ({ module }) => {
                     <p className="text-gray-500 mt-1">Define las unidades didácticas y visualiza su planificación académica completa.</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <button onClick={handlePrintAll} className="flex items-center bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition">
-                        <PrinterIcon className="w-5 h-5 mr-1" /> Imprimir Planificación Completa
-                    </button>
+
                     <button onClick={() => handleOpenModal(null)} className="flex items-center bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition">
                         <PlusIcon className="w-5 h-5 mr-1" /> Nueva UT
                     </button>

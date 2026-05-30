@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { ResultadoAprendizaje, CriterioEvaluacion, AsociacionCriterio, UnidadTrabajo, InstrumentoEvaluacion, EvaluationActivity } from '../types';
 import { PlusIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, XIcon, FileTextIcon, SettingsIcon, PrinterIcon } from '../components/icons';
 import { calculateRAGrade, calculateCriterioGrade } from '../services/academicAnalytics';
-import { generateRAPlanningPDF } from '../services/reportGenerator';
+
 
 // Modal for RA/Criterio Form
 interface FormModalProps {
@@ -379,8 +379,7 @@ const RAView: React.FC<RAViewProps> = ({ module }) => {
         setAsocModalState({isOpen: false, criterio: null});
     };
 
-    const handlePrintRAs = () => generateRAPlanningPDF(resultadosAprendizaje, criteriosEvaluacion, unidadesTrabajo, instrumentosEvaluacion, teacherData, instituteData);
-    
+
     const toggleExpand = (raId: string) => {
         setExpandedRAs(prev => {
             const newSet = new Set(prev);
@@ -435,7 +434,7 @@ const RAView: React.FC<RAViewProps> = ({ module }) => {
                         </div>
                     ) : (
                         <div className="flex items-center space-x-2">
-                            <button onClick={handlePrintRAs} className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700 transition"><PrinterIcon className="w-5 h-5 mr-1" />Imprimir</button>
+
                             <button onClick={() => setIsEditingWeights(true)} className="flex items-center bg-yellow-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition"><SettingsIcon className="w-5 h-5 mr-1" />Ajustar Ponderaciones</button>
                             <button onClick={() => handleOpenFormModal('ra', { id: `ra_${Date.now()}`, nombre: '', ponderacion: 0, criteriosEvaluacion: [] })} className="flex items-center bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"><PlusIcon className="w-5 h-5 mr-1" />Nuevo RA</button>
                         </div>

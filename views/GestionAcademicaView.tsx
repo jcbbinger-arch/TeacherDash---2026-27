@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Student, CourseModuleGrades, GradeValue, StudentCalculatedGrades, InstrumentoEvaluacion } from '../types';
 import { ACADEMIC_EVALUATION_STRUCTURE, COURSE_MODULES } from '../data/constants';
-import { ClipboardListIcon, SaveIcon, ExportIcon, PencilIcon, LockClosedIcon, LockOpenIcon } from '../components/icons';
-import { downloadPdfWithTables, downloadExcel } from '../components/printUtils';
+import { ClipboardListIcon, SaveIcon, ExportIcon, PencilIcon, LockClosedIcon, LockOpenIcon, PrinterIcon } from '../components/icons';
+import { downloadExcel } from '../components/printUtils';
 import { ExportButtons } from '../components/ExportButtons';
 import { useAppContext } from '../context/AppContext';
 import { calculateStudentPeriodAverages, calculateModularGrades } from '../services/gradeCalculator';
+import { generateAcademicReportPDF, generateGenericTablePDF } from '../services/reportGenerator';
 
 const EvaluacionInstrumentosTab: React.FC = () => {
     const { 
@@ -20,15 +21,15 @@ const EvaluacionInstrumentosTab: React.FC = () => {
 
     const handleExport = (format: 'pdf' | 'excel') => {
         const headers = [['Alumno', ...activities.map(act => act.name)]];
-        const bodies = [sortedStudents.map(student => [
+        const rows = sortedStudents.map(student => [
             `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
             ...activities.map(act => localGrades[student.id]?.[act.id] ?? '-')
-        ])];
+        ]);
         
         if (format === 'pdf') {
-            downloadPdfWithTables('Evaluación por Instrumentos', headers, bodies, teacherData, instituteData);
+            generateGenericTablePDF('Evaluación por Instrumentos', [headers[0]], rows, teacherData, instituteData);
         } else {
-            downloadExcel('Evaluación por Instrumentos', headers, bodies);
+            downloadExcel('Evaluación por Instrumentos', headers, [rows]);
         }
     };
 
@@ -227,24 +228,65 @@ const GestionAcademicaView: React.FC = () => {
 
     const handleExport = (format: 'pdf' | 'excel') => {
         if (activeTab === 'principal') {
-            const headers = [['Alumno', ...ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(p => [...p.instruments.map(i => `${p.name} ${i.name}`), 'Media']) ]];
-            const bodies = [sortedStudents.map(student => [
-                `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
-                ...ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => [
-                     ...period.instruments.map(inst => {
-                        // Simplified grade lookup for export
-                        return '...'; // Needs proper lookup implementation
-                     }),
-                     finalGradesAndAverages.studentGrades[student.id].averages[period.key]?.toFixed(2) ?? '-'
-                ])
-            ])];
-            if (format === 'pdf') downloadPdfWithTables('Gestión Académica - Principal', headers, bodies, teacherData, instituteData);
-            else downloadExcel('Gestión Académica - Principal', headers, bodies);
+            const gradingsMap: Record<string, any> = {
+                studentGrades: {}
+            };
+
+            students.forEach(student => {
+                const averages = finalGradesAndAverages.studentGrades[student.id].averages;
+                const calc = calculatedStudentGrades[student.id];
+                const instGrades = instrumentGrades[student.id] || {};
+
+                // Find Exam activities for calculations
+                const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
+                    inst.nombre?.toLowerCase() === 'examen' || inst.id?.toLowerCase() === 'examen'
+                );
+                
+                const getExamGrade = (period: string, index: number) => {
+                    if (!examInstrument) return null;
+                    const activitiesInPeriod = (examInstrument.activities || []).filter(a => a.trimester === period);
+                    const activity = activitiesInPeriod[index];
+                    if (!activity) return null;
+                    const grades = instGrades[activity.id];
+                    return typeof grades === 'object' && grades !== null && 'normal' in grades ? grades.normal : (typeof grades === 'number' ? grades : null);
+                };
+
+                gradingsMap.studentGrades[student.id] = {
+                    averages,
+                    // T1
+                    t1_ex1: getExamGrade('t1', 0),
+                    t1_ex2: getExamGrade('t1', 1),
+                    t1_serv: calc?.serviceAverages?.t1 ?? null,
+                    t1_prac: calc?.practicalExams?.t1 ?? null,
+                    // T2
+                    t2_ex1: getExamGrade('t2', 0),
+                    t2_ex2: getExamGrade('t2', 1),
+                    t2_serv: calc?.serviceAverages?.t2 ?? null,
+                    t2_prac: calc?.practicalExams?.t2 ?? null,
+                    // Rec/Final
+                    rec_ex: localAcademicGrades[student.id]?.rec?.manualGrades?.examenRec ?? null,
+                    rec_prac: calc?.practicalExams?.rec ?? null
+                };
+            });
+
+            if (format === 'pdf') {
+                generateAcademicReportPDF(sortedStudents, gradingsMap, teacherData, instituteData);
+            } else {
+                const headers = [['Alumno', '1º T1_Ex1', '1º T1_Ex2', '1º Serv', '1º Prac', '1º MEDIA', '2º T1_Ex1', '2º T1_Ex2', '2º Serv', '2º Prac', '2º MEDIA', 'Rec Ex', 'Rec Prac', 'FINAL']];
+                const body = sortedStudents.map(student => {
+                    const g = gradingsMap.studentGrades[student.id];
+                    return [
+                        `${student.apellido1} ${student.apellido2}, ${student.nombre}`,
+                        g.t1_ex1, g.t1_ex2, g.t1_serv, g.t1_prac, g.averages.t1,
+                        g.t2_ex1, g.t2_ex2, g.t2_serv, g.t2_prac, g.averages.t2,
+                        g.rec_ex, g.rec_prac, g.averages.final
+                    ];
+                });
+                downloadExcel('Gestión Académica - Principal', headers, [body]);
+            }
         } else if (activeTab === 'instrumentos') {
-            // EvaluacionInstrumentosTab already handles its own export, maybe unify
-            // For now, doing it within this tab component
+            // EvaluacionInstrumentosTab already handles its own export
         } else {
-             // 'otros' tab export implementation
              addToast('Exportación para "Otros Módulos" aún no implementada.', 'info');
         }
     };
@@ -405,8 +447,8 @@ const GestionAcademicaView: React.FC = () => {
                             <React.Fragment key={groupName}>
                                 <tr><td colSpan={100} className="bg-gray-200 font-bold p-1 text-left pl-4">{groupName}</td></tr>
                                 {studentsInGroup.map((student, index) => (
-                                <tr key={student.id} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-blue-50' : 'bg-green-50'}`}>
-                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
+                                <tr key={student.id} className={`group hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                                        <td className={`p-1 border text-left font-semibold text-gray-800 w-48 sticky left-0 group-hover:bg-orange-100 ${index % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>{`${student.apellido1} ${student.apellido2}, ${student.nombre}`}</td>
                                         {ACADEMIC_EVALUATION_STRUCTURE.periods.flatMap(period => {
                                             const studentAverage = finalGradesAndAverages.studentGrades[student.id].averages[period.key];
                                             return [

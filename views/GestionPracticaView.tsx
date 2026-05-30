@@ -4,7 +4,7 @@ import { PlusIcon, TrashIcon, SaveIcon, ChefHatIcon, LockClosedIcon, LockOpenIco
 import { useAppContext } from '../context/AppContext';
 
 const ServiceEvaluationView = lazy(() => import('./ServiceEvaluationView'));
-const ReportsCenterModal = lazy(() => import('../components/ReportsCenterModal'));
+
 
 // Modal for assigning students to an agrupacion
 const AsignarAlumnosModal: React.FC<{
@@ -225,7 +225,7 @@ const GestionPracticaView: React.FC<GestionPracticaViewProps> = ({
         comedor: { name: '', responsibleGroupId: '' },
         takeaway: { name: '', responsibleGroupId: '' }
     });
-    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
     const [collapsedTrimesters, setCollapsedTrimesters] = useState<Set<string>>(new Set());
 
 
@@ -419,9 +419,7 @@ const GestionPracticaView: React.FC<GestionPracticaViewProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center space-x-2 flex-wrap gap-2">
-                         <button onClick={() => setIsReportModalOpen(true)} className="flex items-center bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition">
-                            <FileTextIcon className="w-5 h-5 mr-1" /> Generar Informes
-                        </button>
+
                         {!isLocked && <button onClick={handleSave} className="flex items-center bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"><SaveIcon className="w-5 h-5 mr-1" /> Guardar</button>}
                         {!isLocked && <button onClick={handleDelete} className="flex items-center bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"><TrashIcon className="w-5 h-5" /></button>}
                     </div>
@@ -679,15 +677,7 @@ const GestionPracticaView: React.FC<GestionPracticaViewProps> = ({
             <main className="flex-1 p-4 sm:p-6 bg-gray-50 overflow-y-auto">
                 {renderWorkspace()}
             </main>
-             {isReportModalOpen && editedService && editedEvaluation && (
-                <Suspense fallback={<div />}>
-                    <ReportsCenterModal
-                        service={editedService}
-                        evaluation={editedEvaluation}
-                        onClose={() => setIsReportModalOpen(false)}
-                    />
-                </Suspense>
-            )}
+
         </div>
     );
 };

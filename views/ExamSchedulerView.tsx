@@ -1,19 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Student, TeacherData, InstituteData } from '../types';
-import { ClockIcon, SearchIcon, ArrowRightIcon, FileTextIcon } from '../components/icons';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-// Helper to add image to PDF
-const addImageToPdf = (doc: jsPDF, imageData: string | null, x: number, y: number, w: number, h: number) => {
-    if (imageData && imageData.startsWith('data:image')) {
-        try {
-            const imageType = imageData.substring(imageData.indexOf('/') + 1, imageData.indexOf(';'));
-            doc.addImage(imageData, imageType.toUpperCase(), x, y, w, h);
-        } catch (e) { console.error("Error adding image:", e); }
-    }
-};
+import { ClockIcon, SearchIcon, ArrowRightIcon, FileTextIcon, PrinterIcon } from '../components/icons';
+import { generateExamSchedulePDF } from '../services/reportGenerator';
 
 const PAGE_MARGIN = 15;
 
@@ -85,67 +74,6 @@ const ExamSchedulerView: React.FC = () => {
         setSelectedStudentIds(newIds);
     };
 
-    const generatePDF = () => {
-        const doc = new jsPDF('l', 'mm', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const formattedDate = new Date(examDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-
-        // Header
-        addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 20, 20);
-        
-        doc.setFontSize(18).setFont('helvetica', 'bold');
-        doc.text('Hoja de Examen Práctico', pageWidth / 2, 20, { align: 'center' });
-        doc.setFontSize(14);
-        doc.text(`Día ${formattedDate}`, pageWidth / 2, 28, { align: 'center' });
-
-        // Split students into two columns for PDF layout if many students
-        const midpoint = Math.ceil(scheduledStudents.length / 2);
-        const col1 = scheduledStudents.slice(0, midpoint);
-        const col2 = scheduledStudents.slice(midpoint);
-
-        const tableHeaders = [['Orden', 'Hora Inicio', 'Hora Final', 'Nombre Alumno']];
-        
-        const getBody = (studentsList: Student[], startIndex: number) => studentsList.map((s, i) => {
-            const times = calculateTimes(startIndex + i);
-            return [startIndex + i + 1, times.entry, times.exit, `${s.apellido1} ${s.apellido2}, ${s.nombre}`];
-        });
-
-        // Left Table
-        autoTable(doc, {
-            startY: 40,
-            head: tableHeaders,
-            body: getBody(col1, 0),
-            theme: 'grid',
-            headStyles: { fillColor: [255, 228, 196], textColor: 0, fontStyle: 'bold' }, // Bisque color roughly matches mock
-            styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
-            columnStyles: { 3: { halign: 'left' } },
-            tableWidth: (pageWidth - (PAGE_MARGIN * 2)) / 2 - 5,
-            margin: { left: PAGE_MARGIN }
-        });
-
-        // Right Table
-        if (col2.length > 0) {
-            autoTable(doc, {
-                startY: 40,
-                head: tableHeaders,
-                body: getBody(col2, midpoint),
-                theme: 'grid',
-                headStyles: { fillColor: [216, 191, 216], textColor: 0, fontStyle: 'bold' }, // Thistle color roughly matches mock
-                styles: { fontSize: 10, cellPadding: 2, halign: 'center' },
-                columnStyles: { 3: { halign: 'left' } },
-                tableWidth: (pageWidth - (PAGE_MARGIN * 2)) / 2 - 5,
-                margin: { left: pageWidth / 2 + 5 }
-            });
-        }
-
-        // Footer
-        const pageHeight = doc.internal.pageSize.getHeight();
-        doc.setFontSize(8).setTextColor(100);
-        doc.text(`${teacherData.name} - ${instituteData.name}`, PAGE_MARGIN, pageHeight - 10);
-
-        doc.save(`Horario_Examen_${examDate}.pdf`);
-    };
-
     return (
         <div className="h-full flex flex-col">
             <header className="flex justify-between items-center mb-6">
@@ -156,10 +84,20 @@ const ExamSchedulerView: React.FC = () => {
                     </h1>
                     <p className="text-gray-500 mt-1">Genera horarios escalonados para exámenes prácticos.</p>
                 </div>
-                <button onClick={generatePDF} disabled={scheduledStudents.length === 0} className="flex items-center bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
-                    <FileTextIcon className="w-5 h-5 mr-2" />
-                    Exportar PDF
-                </button>
+                {scheduledStudents.length > 0 && (
+                    <button 
+                        onClick={() => generateExamSchedulePDF(
+                            examDate,
+                            scheduledStudents.map((s, i) => ({ student: s, ...calculateTimes(i) })),
+                            teacherData,
+                            instituteData
+                        )}
+                        className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+                    >
+                        <PrinterIcon className="w-5 h-5 mr-2" />
+                        Exportar PDF
+                    </button>
+                )}
             </header>
 
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">

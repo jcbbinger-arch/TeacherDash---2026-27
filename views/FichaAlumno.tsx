@@ -16,7 +16,6 @@ import {
 import { useAppContext } from '../context/AppContext';
 import { ExportButtons } from '../components/ExportButtons';
 import * as XLSX from 'xlsx';
-import { generateStudentFilePDF } from '../services/reportGenerator';
 import { calculateRAGrade, calculateCriterioGrade } from '../services/academicAnalytics';
 import { calculateStudentPeriodAverages, calculateModularGrades } from '../services/gradeCalculator';
 import { ACADEMIC_EVALUATION_STRUCTURE, COURSE_MODULES, SERVICE_GRADE_WEIGHTS, PRACTICAL_EXAM_RUBRIC } from '../data/constants';
@@ -309,23 +308,10 @@ const FichaAlumno: React.FC<FichaAlumnoProps> = ({ student, onBack, onUpdatePhot
     setIsEditing(false);
   };
 
-  const handlePrint = () => {
-      generateStudentFilePDF(
-          student,
-          allCalculatedGrades[student.id],
-          allAcademicGrades[student.id],
-          allCourseGrades[student.id],
-          timelineEvents,
-          teacherData,
-          instituteData,
-          instrumentGrades,
-          pcInstrumentosEvaluacion
-      );
-  };
-  
   const handleExport = (format: 'pdf' | 'excel') => {
-      if (format === 'pdf') handlePrint();
-      else {
+      if (format === 'pdf') {
+          addToast('Generación de PDF en Ficha de Alumno temporalmente desactivada o no implementada con el nuevo formato.', 'info');
+      } else if (format === 'excel') {
           const wb = XLSX.utils.book_new();
           const ws = XLSX.utils.aoa_to_sheet([
               ['Alumno', fullName],
