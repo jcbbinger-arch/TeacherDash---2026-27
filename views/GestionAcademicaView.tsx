@@ -542,10 +542,10 @@ const GestionAcademicaView: React.FC = () => {
                                     let calculated = false;
 
                                     if (module.name === 'Optativa') {
-                                        gradesObj = calculateModularGrades(student.id, instrumentGrades, optativaInstrumentosEvaluacion);
+                                        gradesObj = calculateModularGrades(student.id, instrumentGrades, optativaInstrumentosEvaluacion, calculatedStudentGrades[student.id]);
                                         calculated = true;
                                     } else if (module.name === 'Proyecto') {
-                                        gradesObj = calculateModularGrades(student.id, instrumentGrades, proyectoInstrumentosEvaluacion);
+                                        gradesObj = calculateModularGrades(student.id, instrumentGrades, proyectoInstrumentosEvaluacion, calculatedStudentGrades[student.id]);
                                         calculated = true;
                                     } else {
                                         const stored = studentCourseGrades[module.name] || {};

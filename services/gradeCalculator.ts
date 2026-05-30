@@ -96,17 +96,34 @@ export const calculateStudentPeriodAverages = (
 export const calculateModularGrades = (
     studentId: string,
     instrumentGrades: InstrumentGrades,
-    instrumentosEvaluacion: Record<string, InstrumentoEvaluacion>
+    instrumentosEvaluacion: Record<string, InstrumentoEvaluacion>,
+    calculatedGrades?: StudentCalculatedGrades
 ): { t1: number | null, t2: number | null, t3: number | null, final: number | null } => {
     
     const grades: { t1: number[], t2: number[], t3: number[] } = { t1: [], t2: [], t3: [] };
     const studentGrades = instrumentGrades[studentId] || {};
 
     Object.values(instrumentosEvaluacion).forEach(instrument => {
+        const name = instrument.nombre.toLowerCase();
+        const isServicios = name.includes('servicio');
+        const isPractico = name.includes('práctico') || name.includes('practico');
+        
         const activities = instrument.activities || [];
         activities.forEach(activity => {
-            const rawGrade = studentGrades[activity.id];
-            const grade = getNumericValue(rawGrade);
+            let grade: number | null = null;
+            
+            if ((isServicios || isPractico) && calculatedGrades) {
+                const period = activity.trimester as 't1' | 't2' | 't3';
+                if (isServicios) {
+                    grade = calculatedGrades.serviceAverages[period] ?? null;
+                } else if (isPractico) {
+                    grade = calculatedGrades.practicalExams[period as 't1' | 't2' | 't3' | 'rec'] ?? null;
+                }
+            } else {
+                const rawGrade = studentGrades[activity.id];
+                grade = getNumericValue(rawGrade);
+            }
+
             if (grade !== null && grade !== undefined && !isNaN(grade)) {
                 if (activity.trimester === 't1') grades.t1.push(grade);
                 else if (activity.trimester === 't2') grades.t2.push(grade);
