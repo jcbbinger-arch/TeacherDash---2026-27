@@ -76,7 +76,12 @@ export const generatePlanningPDF = (viewModel: ReportViewModel) => {
         const pageWidth = doc.internal.pageSize.getWidth();
         
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
         addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
         
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40);
         doc.text(`Planning: ${service.name}`, pageWidth / 2, 18, { align: 'center' });
@@ -173,7 +178,12 @@ export const generateTrackingSheetPDF = (viewModel: ReportViewModel) => {
         
         // HEADER
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
         addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
         
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40);
         doc.text(`Ficha de Seguimiento Semanal: ${service.name}`, pageWidth / 2, 18, { align: 'center' });
@@ -261,7 +271,13 @@ export const generateFullEvaluationReportPDF = (viewModel: ReportViewModel) => {
         const doc = data.doc;
         const pageWidth = doc.internal.pageSize.getWidth();
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
         addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
+        
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40);
         doc.text(`Ficha de Evaluación: ${service.name}`, pageWidth / 2, 18, { align: 'center' });
         doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(100);
@@ -328,6 +344,13 @@ const _drawDetailedStudentReportPage = (doc: jsPDF, viewModel: ReportViewModel, 
     const didDrawPage = (data: any) => {
         const pageWidth = doc.internal.pageSize.getWidth();
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
+        addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
+        
         doc.setFontSize(12).setFont('helvetica', 'bold').setTextColor(40);
         doc.text(service.name, pageWidth / 2, 16, { align: 'center' });
         doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(100);
@@ -413,7 +436,13 @@ export const generateEntryExitSheetPDF = (students: Student[], teacherData: Teac
     const didDrawPage = (data: any) => {
         const pageWidth = doc.internal.pageSize.getWidth();
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
         addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
+
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40).text('Hoja de Registro de Entradas y Salidas', pageWidth / 2, 18, { align: 'center' });
         addFooter(doc, data, teacherData, instituteData);
     };
@@ -433,6 +462,13 @@ export const generateAnalyticalEvaluationReportPDF = (viewModel: ReportViewModel
         const doc = data.doc;
         const pageWidth = doc.internal.pageSize.getWidth();
         addImageToPdf(doc, instituteData.logo, PAGE_MARGIN, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(instituteData.name || 'Instituto', PAGE_MARGIN + 20, 18);
+        
+        addImageToPdf(doc, teacherData.logo, pageWidth - PAGE_MARGIN - 15, 10, 15, 15);
+        doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(40);
+        doc.text(teacherData.name || 'Profesor', pageWidth - PAGE_MARGIN - 20, 18, { align: 'right' });
+        
         doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40).text(`Informe Analítico: ${service.name}`, pageWidth / 2, 18, { align: 'center' });
         doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(100).text(`Fecha del servicio: ${new Date(service.date).toLocaleDateString('es-ES')}`, pageWidth / 2, 24, { align: 'center' });
         addFooter(doc, data, teacherData, instituteData);
