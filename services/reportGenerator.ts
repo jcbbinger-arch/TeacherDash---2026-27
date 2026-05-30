@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { TeacherData, InstituteData, Student } from '../types';
+import { TeacherData, InstituteData, Student, InstrumentGrades, InstrumentoEvaluacion, PracticalExamEvaluation } from '../types';
 
 const PAGE_MARGIN = 15;
 
@@ -192,6 +192,147 @@ export const generateEntryExitPDF = (
     });
 
     doc.save(`Registro_${type.replace(/\s+/g, '_')}_${date}.pdf`);
+};
+
+export const generateStudentFilePDF = (
+    student: Student,
+    calculatedGrades: any,
+    academicGrades: any,
+    servicesData: any[],
+    instrumentGrades: InstrumentGrades,
+    pcInstrumentosEvaluacion: Record<string, InstrumentoEvaluacion>,
+    practicalExamEvaluations: PracticalExamEvaluation[],
+    teacherData: TeacherData,
+    instituteData: InstituteData
+) => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const title = `Ficha de Alumno: ${student.nombre} ${student.apellido1}`;
+    
+    const fullName = `${student.apellido1} ${student.apellido2}, ${student.nombre}`;
+    
+    const drawPageHeader = () => {
+        drawHeaderAndFooter(doc, teacherData, instituteData, title);
+    };
+
+    drawPageHeader();
+
+    // --- STUDENT INFO ---
+    doc.setFontSize(12).setFont('helvetica', 'bold').text('Datos del Alumno', PAGE_MARGIN, 45);
+    doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(50);
+    doc.text(`Nombre: ${fullName}`, PAGE_MARGIN, 52);
+    doc.text(`NRE: ${student.nre || 'N/A'}`, PAGE_MARGIN, 57);
+    doc.text(`Grupo: ${student.grupo || 'N/A'}`, PAGE_MARGIN, 62);
+    doc.text(`Email: ${student.emailOficial || student.emailPersonal || 'N/A'}`, PAGE_MARGIN, 67);
+
+    // --- SUMMARY GRADES ---
+    doc.setFontSize(12).setFont('helvetica', 'bold').setTextColor(0).text('Resumen de Calificaciones (PC)', PAGE_MARGIN, 77);
+    
+    const summaryBody = [
+        ['1º Trimestre', calculatedGrades?.serviceAverages?.t1?.toFixed(2) || '-', calculatedGrades?.practicalExams?.t1?.toFixed(2) || '-', academicGrades?.t1?.manualGrades?.media?.toFixed(2) || '-'],
+        ['2º Trimestre', calculatedGrades?.serviceAverages?.t2?.toFixed(2) || '-', calculatedGrades?.practicalExams?.t2?.toFixed(2) || '-', academicGrades?.t2?.manualGrades?.media?.toFixed(2) || '-'],
+        ['Nota Final', '-', '-', academicGrades?.final?.manualGrades?.media?.toFixed(2) || '-']
+    ];
+
+    autoTable(doc, {
+        startY: 80,
+        margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+        head: [['Periodo', 'Media Servicios', 'Media Práctico', 'Media Final']],
+        body: summaryBody,
+        theme: 'grid',
+        headStyles: { fillColor: [70, 70, 70] },
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // --- DETAILED EXAMS (TEÓRICO) ---
+    doc.setFontSize(12).setFont('helvetica', 'bold').text('Detalle de Exámenes (Teórico PC)', PAGE_MARGIN, currentY);
+    
+    const examInstrument = Object.values(pcInstrumentosEvaluacion).find(inst => 
+        inst.nombre?.toLowerCase() === 'examen' || inst.id?.toLowerCase() === 'examen'
+    );
+
+    if (examInstrument && examInstrument.activities) {
+        const examRows: any[] = [];
+        ['t1', 't2', 't3'].forEach(tri => {
+            const activities = examInstrument.activities.filter(a => a.trimester === tri);
+            activities.forEach(act => {
+                const grade = instrumentGrades[student.id]?.[act.id];
+                const g = typeof grade === 'object' && grade !== null ? grade : { normal: typeof grade === 'number' ? grade : null, rec1: null, rec2: null };
+                const final = Math.max(g.normal ?? 0, g.rec1 ?? 0, g.rec2 ?? 0);
+                examRows.push([
+                    tri.toUpperCase(),
+                    act.name,
+                    g.normal?.toFixed(2) || '-',
+                    g.rec1?.toFixed(2) || '-',
+                    g.rec2?.toFixed(2) || '-',
+                    final > 0 ? final.toFixed(2) : '-'
+                ]);
+            });
+        });
+
+        autoTable(doc, {
+            startY: currentY + 3,
+            margin: { top: 42, left: PAGE_MARGIN, right: PAGE_MARGIN },
+            head: [['Trim', 'Actividad', 'Normal', 'Rec 1', 'Rec 2', 'Final']],
+            body: examRows,
+            theme: 'grid',
+            headStyles: { fillColor: [100, 100, 100] },
+            didDrawPage: drawPageHeader
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- DETAILED SERVICES ---
+    if (currentY > 250) { doc.addPage(); currentY = 45; }
+    doc.setFontSize(12).setFont('helvetica', 'bold').text('Detalle de Servicios (PC)', PAGE_MARGIN, currentY);
+
+    if (servicesData && servicesData.length > 0) {
+        const servicesRows = servicesData.map(s => [
+            s.service.trimester.toUpperCase(),
+            s.service.name,
+            new Date(s.service.date).toLocaleDateString('es-ES'),
+            s.individualGrade.toFixed(2),
+            s.groupGrade.toFixed(2),
+            s.studentGrade.toFixed(2)
+        ]);
+
+        autoTable(doc, {
+            startY: currentY + 3,
+            margin: { top: 42, left: PAGE_MARGIN, right: PAGE_MARGIN },
+            head: [['Trim', 'Servicio', 'Fecha', 'Nota Ind.', 'Nota Grp.', 'Nota Final']],
+            body: servicesRows,
+            theme: 'grid',
+            headStyles: { fillColor: [44, 62, 80] },
+            didDrawPage: drawPageHeader
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- PRACTICAL EXAMS detalle ---
+    if (currentY > 250) { doc.addPage(); currentY = 45; }
+    doc.setFontSize(12).setFont('helvetica', 'bold').text('Exámenes Prácticos', PAGE_MARGIN, currentY);
+    
+    const studentEvals = practicalExamEvaluations.filter(e => e.studentId === student.id);
+    if (studentEvals.length > 0) {
+        const practicalRows = studentEvals.map(ev => [
+            ev.examPeriod.toUpperCase(),
+            ev.finalScore?.toFixed(2) || '-'
+        ]);
+
+        autoTable(doc, {
+            startY: currentY + 3,
+            margin: { top: 42, left: PAGE_MARGIN, right: PAGE_MARGIN },
+            head: [['Periodo', 'Calificación']],
+            body: practicalRows,
+            theme: 'grid',
+            headStyles: { fillColor: [142, 68, 173] },
+            didDrawPage: drawPageHeader
+        });
+    } else {
+        doc.setFontSize(10).setFont('helvetica', 'italic').text('No hay exámenes prácticos registrados.', PAGE_MARGIN, currentY + 8);
+    }
+
+    doc.save(`Ficha_${student.apellido1}_${student.nombre}_${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
 export const generateGenericTablePDF = (

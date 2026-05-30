@@ -119,8 +119,14 @@ const getGradeForActivity = (
 const GradesMatrix: React.FC<{
     instrument: InstrumentoEvaluacion;
 }> = ({ instrument }) => {
-    const { students, instrumentGrades, setInstrumentGrades } = useAppContext();
+    const { students, instrumentGrades, setInstrumentGrades, calculatedStudentGrades } = useAppContext();
     const sortedStudents = useMemo(() => [...students].sort((a,b) => a.apellido1.localeCompare(b.apellido1)), [students]);
+    
+    const isCalculatedInstrument = useMemo(() => {
+        const name = instrument.nombre.toLowerCase();
+        return name.includes('servicio') || name.includes('práctico') || name.includes('practico');
+    }, [instrument.nombre]);
+
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
     const handleGradeChange = (studentId: string, activityId: string, field: keyof ActivityGrade, value: string) => {
@@ -309,26 +315,47 @@ const GradesMatrix: React.FC<{
                                 const grades = instrumentGrades[student.id]?.[act.id];
                                 const activityGrade: ActivityGrade = typeof grades === 'object' && grades !== null && 'normal' in grades ? grades : { normal: typeof grades === 'number' ? grades : null, rec1: null, rec2: null, isLockedNormal: false, isLockedRec1: false, isLockedRec2: false };
                                 
-                                const finalGrade = Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
+                                let calculatedGrade: number | null = null;
+                                if (isCalculatedInstrument) {
+                                    const period = act.trimester as 't1' | 't2' | 't3' | 'rec';
+                                    const calc = calculatedStudentGrades[student.id];
+                                    if (calc) {
+                                        if (instrument.nombre.toLowerCase().includes('servicio')) {
+                                            calculatedGrade = calc.serviceAverages[period as 't1' | 't2' | 't3'] ?? null;
+                                        } else if (instrument.nombre.toLowerCase().includes('práctico') || instrument.nombre.toLowerCase().includes('practico')) {
+                                            calculatedGrade = calc.practicalExams[period] ?? null;
+                                        }
+                                    }
+                                }
+
+                                const finalGrade = isCalculatedInstrument ? (calculatedGrade ?? 0) : Math.max(activityGrade.normal ?? 0, activityGrade.rec1 ?? 0, activityGrade.rec2 ?? 0);
 
                                 return (
                                     <React.Fragment key={act.id}>
                                         <td className="p-1 border text-center">
-                                            <input type="number" 
-                                                   value={activityGrade.normal ?? ''} 
-                                                   onChange={e => handleGradeChange(student.id, act.id, 'normal', e.target.value)} 
-                                                   onPaste={e => handlePasteColumn(e, index, act.id, 'normal')}
-                                                   className="w-12 p-1 border rounded text-center"
-                                                   disabled={activityGrade.isLockedNormal}
-                                            />
+                                            {isCalculatedInstrument ? (
+                                                <span className="font-semibold text-blue-700">{calculatedGrade !== null ? calculatedGrade.toFixed(2) : '-'}</span>
+                                            ) : (
+                                                <input type="number" 
+                                                       value={activityGrade.normal ?? ''} 
+                                                       onChange={e => handleGradeChange(student.id, act.id, 'normal', e.target.value)} 
+                                                       onPaste={e => handlePasteColumn(e, index, act.id, 'normal')}
+                                                       className="w-12 p-1 border rounded text-center"
+                                                       disabled={activityGrade.isLockedNormal}
+                                                />
+                                            )}
                                         </td>
                                         <td className="p-1 border text-center">
-                                            <input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec1')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec1}/>
+                                            {!isCalculatedInstrument && (
+                                                <input type="number" value={activityGrade.rec1 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec1', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec1')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec1}/>
+                                            )}
                                         </td>
                                         <td className="p-1 border text-center">
-                                            <input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec2')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec2}/>
+                                            {!isCalculatedInstrument && (
+                                                <input type="number" value={activityGrade.rec2 ?? ''} onChange={e => handleGradeChange(student.id, act.id, 'rec2', e.target.value)} onPaste={e => handlePasteColumn(e, index, act.id, 'rec2')} className="w-12 p-1 border rounded text-center" disabled={activityGrade.isLockedRec2}/>
+                                            )}
                                         </td>
-                                        <td className="p-2 border text-center font-bold">{finalGrade > 0 ? finalGrade.toFixed(2) : '-'}</td>
+                                        <td className="p-2 border text-center font-bold">{(isCalculatedInstrument ? (calculatedGrade !== null) : (finalGrade > 0)) ? finalGrade.toFixed(2) : '-'}</td>
                                     </React.Fragment>
                                 );
                             })}
